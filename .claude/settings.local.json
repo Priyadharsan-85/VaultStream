@@ -5,7 +5,10 @@
       "Bash(rtk find *)",
       "Bash(rtk ls *)",
       "Bash(rtk git *)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(rtk gh *)",
+      "Bash(gh auth *)"
     ]
   }
 }
