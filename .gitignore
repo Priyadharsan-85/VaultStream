@@ -1,0 +1,33 @@
+# Maven
+target/
+!**/src/main/**
+!**/src/test/**
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.hs_err_pid*
+
+# IDE
+.idea
+*.iws
+*.iml
+*.ipr
+
+# Mac
+.DS_Store
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Environment variables
+.env
+
+# VaultStream specific
+logs/
+*.db
