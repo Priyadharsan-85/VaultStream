@@ -1,0 +1,57 @@
+server:
+  port: 0  # Random port for tests to avoid conflicts
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  mail:
+    host: localhost
+    port: 25
+    test: true
+  security:
+    user:
+      name: test
+      password: test
+      roles: USER
+
+# Application specific properties for testing
+vaultstream:
+  ledger:
+    batch-size: 100
+    flush-interval-ms: 100
+    retry-attempts: 1
+    retry-backoff-ms: 10
+  event-processing:
+    thread-pool-size: 2
+    queue-capacity: 100
+  security:
+    jwt-secret: test-secret-key-for-testing-only-minimum-32-chars-long
+    jwt-expiration-ms: 3600000
+    bcrypt-strength: 4  # Reduced for faster tests
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.vaultstream: DEBUG
+    org.springframework: WARN
+    org.hibernate: WARN
