@@ -93,6 +93,7 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
+            <version>9.22.3</version>
         </dependency>
 
         <!-- Lombok -->
@@ -117,12 +118,7 @@
             </exclusions>
         </dependency>
 
-        <!-- Springdoc OpenAPI UI -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-ui</artifactId>
-            <version>1.15.12</version>
-        </dependency>
+        <!-- Springdoc OpenAPI UI removed due to dependency issues -->
 
         <!-- MapStruct -->
         <dependency>
