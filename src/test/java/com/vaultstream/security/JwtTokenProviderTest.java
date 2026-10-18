@@ -55,11 +55,11 @@ class JwtTokenProviderTest {
         assertFalse(token.isEmpty());
 
         // Verify token can be parsed and has expected claims
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(TEST_SECRET)
+        Claims claims = Jwts.parser()
+                .verifyWith(TEST_SECRET)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parse(token)
+                .getPayload();
 
         assertEquals("testuser", claims.getSubject());
         assertNotNull(claims.getIssuedAt());
