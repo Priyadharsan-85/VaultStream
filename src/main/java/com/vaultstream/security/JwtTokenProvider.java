@@ -1,11 +1,14 @@
 package com.vaultstream.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Slf4j
@@ -18,6 +21,10 @@ public class JwtTokenProvider {
     @Value("${vaultstream.security.jwt-expiration-ms}")
     private int jwtExpirationInMs;
 
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    }
+
     public String generateToken(Authentication authentication) {
         // In a real application, you would get user details from authentication
         String username = authentication.getName();
@@ -29,21 +36,21 @@ public class JwtTokenProvider {
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().verifyWith(jwtSecret).build().parse(token);
+            Jwts.parser().verifyWith(getSigningKey()).build().parseClaimsJws(token);
             return true;
-        } catch (SignatureException ex) {
+        } catch (io.jsonwebtoken.security.SignatureException ex) {
             log.error("Invalid JWT signature");
-        } catch (MalformedJwtException ex) {
+        } catch (io.jsonwebtoken.MalformedJwtException ex) {
             log.error("Invalid JWT token");
-        } catch (ExpiredJwtException ex) {
+        } catch (io.jsonwebtoken.ExpiredJwtException ex) {
             log.error("Expired JWT token");
-        } catch (UnsupportedJwtException ex) {
+        } catch (io.jsonwebtoken.UnsupportedJwtException ex) {
             log.error("Unsupported JWT token");
         } catch (IllegalArgumentException ex) {
             log.error("JWT claims string is empty");
@@ -53,9 +60,9 @@ public class JwtTokenProvider {
 
     public String getUsernameFromToken(String token) {
         return Jwts.parser()
-                .verifyWith(jwtSecret)
+                .verifyWith(getSigningKey())
                 .build()
-                .parse(token)
+                .parseClaimsJws(token)
                 .getPayload()
                 .getSubject();
     }
