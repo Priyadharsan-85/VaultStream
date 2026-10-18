@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'vaultstream'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['vaultstream-app:8081']
+    # Optional: if you want to scrape the app from host machine, use host.docker.internal
+    # For Docker Compose, we use the service name.
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['vaultstream-db:9187']  # Assuming you have a postgres exporter; otherwise, remove this job
+
+  # Scrape Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
