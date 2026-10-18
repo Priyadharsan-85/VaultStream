@@ -9,7 +9,10 @@
       "Bash(git config *)",
       "Bash(rtk gh *)",
       "Bash(gh auth *)",
-      "Bash(rtk grep *)"
+      "Bash(rtk grep *)",
+      "Bash(grep -E \"\\\\.\\(js|ts|jsx|tsx|vue|html|css|scss|sass|less\\)$\")",
+      "Bash(sed 's/\\\\.java$//')",
+      "Bash(sed 's/Test\\\\.java$//')"
     ]
   }
 }
