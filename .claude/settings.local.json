@@ -12,7 +12,14 @@
       "Bash(rtk grep *)",
       "Bash(grep -E \"\\\\.\\(js|ts|jsx|tsx|vue|html|css|scss|sass|less\\)$\")",
       "Bash(sed 's/\\\\.java$//')",
-      "Bash(sed 's/Test\\\\.java$//')"
+      "Bash(sed 's/Test\\\\.java$//')",
+      "Bash(java *)",
+      "Bash(mvn *)",
+      "Bash(rtk read *)",
+      "Bash(whereis java *)",
+      "Bash(docker-compose ps *)",
+      "Bash(docker-compose logs *)",
+      "Bash(docker-compose down *)"
     ]
   }
 }

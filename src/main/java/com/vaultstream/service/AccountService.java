@@ -8,6 +8,7 @@ import com.vaultstream.monitoring.AccountMetrics;
 import com.vaultstream.model.Account;
 import com.vaultstream.model.Account.AccountStatus;
 import com.vaultstream.repository.AccountRepository;
+import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final AccountMetrics accountMetrics;
+    private final WebSocketService webSocketService;
 
     @Transactional(readOnly = true)
     public AccountDto getAccountById(UUID id) {
@@ -104,6 +106,8 @@ public class AccountService {
 
         account.setBalance(account.getBalance().add(amount));
         Account updatedAccount = accountRepository.save(account);
+        // Send WebSocket balance update notification
+        webSocketService.sendBalanceUpdate(accountId, updatedAccount.getBalance().doubleValue());
         return accountMapper.toDto(updatedAccount);
     }
 
@@ -126,6 +130,8 @@ public class AccountService {
 
         account.setBalance(account.getBalance().subtract(amount));
         Account updatedAccount = accountRepository.save(account);
+        // Send WebSocket balance update notification
+        webSocketService.sendBalanceUpdate(accountId, updatedAccount.getBalance().doubleValue());
         return accountMapper.toDto(updatedAccount);
     }
 }

@@ -118,6 +118,13 @@
             </exclusions>
         </dependency>
 
+        <!-- Spring Boot Starter WebSocket -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+
         <!-- Springdoc OpenAPI UI removed due to dependency issues -->
 
         <!-- MapStruct -->

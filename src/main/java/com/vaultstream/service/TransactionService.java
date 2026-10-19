@@ -9,6 +9,7 @@ import com.vaultstream.model.Transaction;
 import com.vaultstream.model.Transaction.TransactionType;
 import com.vaultstream.repository.AccountRepository;
 import com.vaultstream.repository.TransactionRepository;
+import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final TransactionMapper transactionMapper;
     private final TransactionMetrics transactionMetrics;
+    private final WebSocketService webSocketService;
 
     @Transactional(readOnly = true)
     public TransactionDto getTransactionById(UUID id) {
@@ -87,6 +89,8 @@ public class TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
         transactionMetrics.incrementDepositCount();
+        // Send WebSocket notification
+        webSocketService.sendTransactionEvent(accountId, savedTransaction);
         return transactionMapper.toDto(savedTransaction);
     }
 
@@ -123,6 +127,8 @@ public class TransactionService {
 
         Transaction savedTransaction = transactionRepository.save(transaction);
         transactionMetrics.incrementWithdrawalCount();
+        // Send WebSocket notification
+        webSocketService.sendTransactionEvent(accountId, savedTransaction);
         return transactionMapper.toDto(savedTransaction);
     }
 
@@ -176,6 +182,10 @@ public class TransactionService {
         Transaction savedOutgoing = transactionRepository.save(outgoingTransaction);
         transactionRepository.save(incomingTransaction);
         transactionMetrics.incrementTransferCount();
+
+        // Send WebSocket notifications for both accounts
+        webSocketService.sendTransactionEvent(fromAccountId, savedOutgoing);
+        webSocketService.sendTransactionEvent(toAccountId, incomingTransaction);
 
         return transactionMapper.toDto(savedOutgoing);
     }
