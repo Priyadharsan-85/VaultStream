@@ -9,7 +9,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=vaultstream_pass
       - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME:-}
       - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD:-}
-      - JWT_SECRET=${JWT_SECRET:-change-this-secret-key-in-production}
+      - JWT_SECRET=${JWT_SECRET:-local-development-only-secret-please-override-in-deployments-0123456789}
       - SERVER_PORT=8081
     depends_on:
       - vaultstream-db

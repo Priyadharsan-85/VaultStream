@@ -1,7 +1,5 @@
 server:
   port: ${SERVER_PORT:8080}
-  servlet:
-    context-path: /api
 
 spring:
   datasource:
@@ -49,7 +47,7 @@ vaultstream:
     thread-pool-size: 8
     queue-capacity: 10000
   security:
-    jwt-secret: ${JWT_SECRET:change-this-secret-key-in-production}
+    jwt-secret: ${JWT_SECRET:local-development-only-secret-please-override-in-deployments-0123456789}
     jwt-expiration-ms: 3600000
     bcrypt-strength: 12
 

@@ -110,6 +110,7 @@ docker-compose up --build
 ### Authentication
 
 - `POST /api/auth/login` - Authenticate user and receive JWT token
+- `POST /api/auth/register` - Register with a username and password, then receive a JWT token
 - `POST /api/auth/logout` - Logout (client-side token disposal)
 
 ### Accounts
