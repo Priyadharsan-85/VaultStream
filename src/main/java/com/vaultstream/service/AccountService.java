@@ -96,7 +96,7 @@ public class AccountService {
             throw new IllegalArgumentException("Deposit amount must be positive");
         }
 
-        Account account = accountRepository.findByIdAndOwnerUser_Username(accountId, ownerUsername)
+        Account account = accountRepository.findOwnedByIdForUpdate(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
@@ -116,7 +116,7 @@ public class AccountService {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
         }
 
-        Account account = accountRepository.findByIdAndOwnerUser_Username(accountId, ownerUsername)
+        Account account = accountRepository.findOwnedByIdForUpdate(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {

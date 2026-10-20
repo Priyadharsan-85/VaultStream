@@ -68,7 +68,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto deposit(UUID accountId, BigDecimal amount, String referenceId, String description,
                                   String ownerUsername) {
-        Account account = findOwnedAccount(accountId, ownerUsername);
+        Account account = findOwnedAccountForUpdate(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Deposit amount must be positive");
@@ -102,7 +102,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto withdraw(UUID accountId, BigDecimal amount, String referenceId, String description,
                                    String ownerUsername) {
-        Account account = findOwnedAccount(accountId, ownerUsername);
+        Account account = findOwnedAccountForUpdate(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
@@ -141,9 +141,23 @@ public class TransactionService {
     public TransactionDto transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String referenceId,
                                    String description, String ownerUsername) {
         // Validate accounts
-        Account fromAccount = findOwnedAccount(fromAccountId, ownerUsername);
-        Account toAccount = accountRepository.findById(toAccountId)
-                .orElseThrow(() -> new ResourceNotFoundException("To account not found with id: " + toAccountId));
+        if (fromAccountId.equals(toAccountId)) {
+            throw new IllegalArgumentException("Source and destination accounts must be different");
+        }
+
+        java.util.Map<UUID, Account> lockedAccounts = accountRepository
+                .findAllByIdsForUpdate(java.util.List.of(fromAccountId, toAccountId))
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(Account::getId, account -> account));
+        Account fromAccount = lockedAccounts.get(fromAccountId);
+        Account toAccount = lockedAccounts.get(toAccountId);
+        if (fromAccount == null || fromAccount.getOwnerUser() == null
+                || !ownerUsername.equals(fromAccount.getOwnerUser().getUsername())) {
+            throw new ResourceNotFoundException("From account not found with id: " + fromAccountId);
+        }
+        if (toAccount == null) {
+            throw new ResourceNotFoundException("To account not found with id: " + toAccountId);
+        }
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Transfer amount must be positive");
@@ -195,8 +209,8 @@ public class TransactionService {
         return transactionMapper.toDto(savedOutgoing);
     }
 
-    private Account findOwnedAccount(UUID accountId, String ownerUsername) {
-        return accountRepository.findByIdAndOwnerUser_Username(accountId, ownerUsername)
+    private Account findOwnedAccountForUpdate(UUID accountId, String ownerUsername) {
+        return accountRepository.findOwnedByIdForUpdate(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
     }
 
