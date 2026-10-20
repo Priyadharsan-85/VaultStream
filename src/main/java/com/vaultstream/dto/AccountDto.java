@@ -62,4 +62,13 @@ public class AccountDto {
         @Digits(integer = 15, fraction = 4)
         private BigDecimal amount;
     }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StatusUpdateRequest {
+        @NotNull
+        private AccountStatus status;
+    }
 }

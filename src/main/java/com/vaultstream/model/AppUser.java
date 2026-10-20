@@ -35,6 +35,10 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;
 
+    @Builder.Default
+    @Column(nullable = false, length = 32)
+    private String role = "ROLE_USER";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -83,6 +83,16 @@ public class AccountService {
     }
 
     @Transactional
+    public AccountDto updateAccountStatus(UUID id, AccountStatus status) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        account.setStatus(status);
+        Account updatedAccount = accountRepository.save(account);
+        accountMetrics.incrementAccountUpdatedCount();
+        return accountMapper.toDto(updatedAccount);
+    }
+
+    @Transactional
     public void deleteAccount(UUID id, String ownerUsername) {
         Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));

@@ -22,7 +22,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         return User.withUsername(user.getUsername())
                 .password(user.getPasswordHash())
-                .authorities("ROLE_USER")
+                .authorities(user.getRole())
                 .build();
     }
 }

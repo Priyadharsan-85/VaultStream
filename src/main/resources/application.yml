@@ -50,6 +50,8 @@ vaultstream:
     jwt-secret: ${JWT_SECRET:local-development-only-secret-please-override-in-deployments-0123456789}
     jwt-expiration-ms: 3600000
     bcrypt-strength: 12
+    admin-username: ${VAULTSTREAM_ADMIN_USERNAME:}
+    admin-password: ${VAULTSTREAM_ADMIN_PASSWORD:}
 
 management:
   endpoints:
