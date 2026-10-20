@@ -41,6 +41,10 @@ public class Account {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_user_id")
+    private AppUser ownerUser;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

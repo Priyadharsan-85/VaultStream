@@ -12,5 +12,13 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     Optional<Account> findByAccountNumber(String accountNumber);
 
+    Optional<Account> findByIdAndOwnerUser_Username(UUID id, String username);
+
+    Optional<Account> findByAccountNumberAndOwnerUser_Username(String accountNumber, String username);
+
+    java.util.List<Account> findAllByOwnerUser_UsernameOrderByCreatedAtDesc(String username);
+
+    boolean existsByIdAndOwnerUser_Username(UUID id, String username);
+
     boolean existsByAccountNumber(String accountNumber);
 }

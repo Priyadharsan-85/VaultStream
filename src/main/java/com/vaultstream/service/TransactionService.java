@@ -31,21 +31,24 @@ public class TransactionService {
     private final WebSocketService webSocketService;
 
     @Transactional(readOnly = true)
-    public TransactionDto getTransactionById(UUID id) {
+    public TransactionDto getTransactionById(UUID id, String ownerUsername) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with id: " + id));
+        requireAccountOwnership(transaction.getAccountId(), ownerUsername);
         return transactionMapper.toDto(transaction);
     }
 
     @Transactional(readOnly = true)
-    public TransactionDto getTransactionByReferenceId(String referenceId) {
+    public TransactionDto getTransactionByReferenceId(String referenceId, String ownerUsername) {
         Transaction transaction = transactionRepository.findByReferenceId(referenceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with reference id: " + referenceId));
+        requireAccountOwnership(transaction.getAccountId(), ownerUsername);
         return transactionMapper.toDto(transaction);
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionsByAccountId(UUID accountId) {
+    public List<TransactionDto> getTransactionsByAccountId(UUID accountId, String ownerUsername) {
+        requireAccountOwnership(accountId, ownerUsername);
         return transactionRepository.findByAccountIdOrderByTimestampDesc(accountId)
                 .stream()
                 .map(transactionMapper::toDto)
@@ -53,7 +56,9 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime, LocalDateTime endTime) {
+    public List<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime,
+                                                                        LocalDateTime endTime, String ownerUsername) {
+        requireAccountOwnership(accountId, ownerUsername);
         return transactionRepository.findByAccountIdAndTimeRange(accountId, startTime, endTime)
                 .stream()
                 .map(transactionMapper::toDto)
@@ -61,9 +66,9 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto deposit(UUID accountId, BigDecimal amount, String referenceId, String description) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    public TransactionDto deposit(UUID accountId, BigDecimal amount, String referenceId, String description,
+                                  String ownerUsername) {
+        Account account = findOwnedAccount(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Deposit amount must be positive");
@@ -95,9 +100,9 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto withdraw(UUID accountId, BigDecimal amount, String referenceId, String description) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    public TransactionDto withdraw(UUID accountId, BigDecimal amount, String referenceId, String description,
+                                   String ownerUsername) {
+        Account account = findOwnedAccount(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
@@ -133,10 +138,10 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String referenceId, String description) {
+    public TransactionDto transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String referenceId,
+                                   String description, String ownerUsername) {
         // Validate accounts
-        Account fromAccount = accountRepository.findById(fromAccountId)
-                .orElseThrow(() -> new ResourceNotFoundException("From account not found with id: " + fromAccountId));
+        Account fromAccount = findOwnedAccount(fromAccountId, ownerUsername);
         Account toAccount = accountRepository.findById(toAccountId)
                 .orElseThrow(() -> new ResourceNotFoundException("To account not found with id: " + toAccountId));
 
@@ -188,5 +193,16 @@ public class TransactionService {
         webSocketService.sendTransactionEvent(toAccountId, incomingTransaction);
 
         return transactionMapper.toDto(savedOutgoing);
+    }
+
+    private Account findOwnedAccount(UUID accountId, String ownerUsername) {
+        return accountRepository.findByIdAndOwnerUser_Username(accountId, ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    }
+
+    private void requireAccountOwnership(UUID accountId, String ownerUsername) {
+        if (!accountRepository.existsByIdAndOwnerUser_Username(accountId, ownerUsername)) {
+            throw new ResourceNotFoundException("Transaction not found");
+        }
     }
 }

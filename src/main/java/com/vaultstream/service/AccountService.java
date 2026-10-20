@@ -8,6 +8,7 @@ import com.vaultstream.monitoring.AccountMetrics;
 import com.vaultstream.model.Account;
 import com.vaultstream.model.Account.AccountStatus;
 import com.vaultstream.repository.AccountRepository;
+import com.vaultstream.repository.AppUserRepository;
 import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,38 +24,41 @@ import java.util.stream.Collectors;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final AppUserRepository appUserRepository;
     private final AccountMapper accountMapper;
     private final AccountMetrics accountMetrics;
     private final WebSocketService webSocketService;
 
     @Transactional(readOnly = true)
-    public AccountDto getAccountById(UUID id) {
-        Account account = accountRepository.findById(id)
+    public AccountDto getAccountById(UUID id, String ownerUsername) {
+        Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
         return accountMapper.toDto(account);
     }
 
     @Transactional(readOnly = true)
-    public AccountDto getAccountByAccountNumber(String accountNumber) {
-        Account account = accountRepository.findByAccountNumber(accountNumber)
+    public AccountDto getAccountByAccountNumber(String accountNumber, String ownerUsername) {
+        Account account = accountRepository.findByAccountNumberAndOwnerUser_Username(accountNumber, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with account number: " + accountNumber));
         return accountMapper.toDto(account);
     }
 
     @Transactional(readOnly = true)
-    public List<AccountDto> getAllAccounts() {
-        return accountRepository.findAll().stream()
+    public List<AccountDto> getAllAccounts(String ownerUsername) {
+        return accountRepository.findAllByOwnerUser_UsernameOrderByCreatedAtDesc(ownerUsername).stream()
                 .map(accountMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public AccountDto createAccount(AccountDto accountDto) {
+    public AccountDto createAccount(AccountDto accountDto, String ownerUsername) {
         if (accountRepository.existsByAccountNumber(accountDto.getAccountNumber())) {
             throw new IllegalArgumentException("Account with number " + accountDto.getAccountNumber() + " already exists");
         }
 
         Account account = accountMapper.toEntity(accountDto);
+        account.setOwnerUser(appUserRepository.findByUsername(ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found")));
         account.setStatus(AccountStatus.PENDING_VERIFICATION);
         if (account.getBalance() == null) {
             account.setBalance(BigDecimal.ZERO);
@@ -65,39 +69,34 @@ public class AccountService {
     }
 
     @Transactional
-    public AccountDto updateAccount(UUID id, AccountDto accountDto) {
-        Account account = accountRepository.findById(id)
+    public AccountDto updateAccount(UUID id, AccountDto accountDto, String ownerUsername) {
+        Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
 
         // Update fields
         if (accountDto.getAccountHolderName() != null) {
             account.setAccountHolderName(accountDto.getAccountHolderName());
         }
-        if (accountDto.getStatus() != null) {
-            account.setStatus(com.vaultstream.model.Account.AccountStatus.valueOf(accountDto.getStatus().name()));
-        }
-
         Account updatedAccount = accountRepository.save(account);
         accountMetrics.incrementAccountUpdatedCount();
         return accountMapper.toDto(updatedAccount);
     }
 
     @Transactional
-    public void deleteAccount(UUID id) {
-        if (!accountRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Account not found with id: " + id);
-        }
-        accountRepository.deleteById(id);
+    public void deleteAccount(UUID id, String ownerUsername) {
+        Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        accountRepository.delete(account);
         accountMetrics.incrementAccountDeletedCount();
     }
 
     @Transactional
-    public AccountDto deposit(UUID accountId, BigDecimal amount) {
+    public AccountDto deposit(UUID accountId, BigDecimal amount, String ownerUsername) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Deposit amount must be positive");
         }
 
-        Account account = accountRepository.findById(accountId)
+        Account account = accountRepository.findByIdAndOwnerUser_Username(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
@@ -112,12 +111,12 @@ public class AccountService {
     }
 
     @Transactional
-    public AccountDto withdraw(UUID accountId, BigDecimal amount) {
+    public AccountDto withdraw(UUID accountId, BigDecimal amount, String ownerUsername) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
         }
 
-        Account account = accountRepository.findById(accountId)
+        Account account = accountRepository.findByIdAndOwnerUser_Username(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
