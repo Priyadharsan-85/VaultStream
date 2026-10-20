@@ -45,6 +45,20 @@ public class AccountDto {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    public static class CreateRequest {
+        @NotBlank
+        @Size(min = 10, max = 34)
+        private String accountNumber;
+
+        @NotBlank
+        @Size(min = 2, max = 100)
+        private String accountHolderName;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class DepositRequest {
         @NotNull
         @Positive

@@ -2,6 +2,7 @@ package com.vaultstream.controller;
 
 import com.vaultstream.dto.AccountDto;
 import com.vaultstream.service.AccountService;
+import com.vaultstream.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import java.security.Principal;
 public class AccountController {
 
     private final AccountService accountService;
+    private final TransactionService transactionService;
 
     @GetMapping("/{id}")
     public ResponseEntity<AccountDto> getAccountById(@PathVariable UUID id, Principal principal) {
@@ -40,8 +42,8 @@ public class AccountController {
     }
 
     @PostMapping
-    public ResponseEntity<AccountDto> createAccount(@Valid @RequestBody AccountDto accountDto, Principal principal) {
-        AccountDto createdAccount = accountService.createAccount(accountDto, principal.getName());
+    public ResponseEntity<AccountDto> createAccount(@Valid @RequestBody AccountDto.CreateRequest request, Principal principal) {
+        AccountDto createdAccount = accountService.createAccount(request, principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAccount);
     }
 
@@ -61,7 +63,8 @@ public class AccountController {
     public ResponseEntity<AccountDto> deposit(@PathVariable UUID id,
                                               @Valid @RequestBody AccountDto.DepositRequest request,
                                               Principal principal) {
-        AccountDto accountDto = accountService.deposit(id, request.getAmount(), principal.getName());
+        transactionService.deposit(id, request.getAmount(), null, null, principal.getName());
+        AccountDto accountDto = accountService.getAccountById(id, principal.getName());
         return ResponseEntity.ok(accountDto);
     }
 
@@ -69,7 +72,8 @@ public class AccountController {
     public ResponseEntity<AccountDto> withdraw(@PathVariable UUID id,
                                                @Valid @RequestBody AccountDto.WithdrawRequest request,
                                                Principal principal) {
-        AccountDto accountDto = accountService.withdraw(id, request.getAmount(), principal.getName());
+        transactionService.withdraw(id, request.getAmount(), null, null, principal.getName());
+        AccountDto accountDto = accountService.getAccountById(id, principal.getName());
         return ResponseEntity.ok(accountDto);
     }
 }
