@@ -32,7 +32,7 @@ class AccountMapperTest {
                 .accountNumber("TEST123456")
                 .accountHolderName("Test User")
                 .balance(BigDecimal.valueOf(1000.00))
-                .status(AccountStatus.ACTIVE)
+                .status(Account.AccountStatus.ACTIVE)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
