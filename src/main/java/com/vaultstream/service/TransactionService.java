@@ -7,7 +7,11 @@ import com.vaultstream.monitoring.TransactionMetrics;
 import com.vaultstream.model.Account;
 import com.vaultstream.model.Transaction;
 import com.vaultstream.model.Transaction.TransactionType;
+import com.vaultstream.model.LedgerEntry;
+import com.vaultstream.model.LedgerJournal;
 import com.vaultstream.repository.AccountRepository;
+import com.vaultstream.repository.LedgerEntryRepository;
+import com.vaultstream.repository.LedgerJournalRepository;
 import com.vaultstream.repository.TransactionRepository;
 import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
@@ -26,26 +30,33 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
+    private final LedgerJournalRepository ledgerJournalRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
     private final TransactionMapper transactionMapper;
     private final TransactionMetrics transactionMetrics;
     private final WebSocketService webSocketService;
 
+    private static final UUID CLEARING_ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @Transactional(readOnly = true)
-    public TransactionDto getTransactionById(UUID id) {
+    public TransactionDto getTransactionById(UUID id, String ownerUsername) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with id: " + id));
+        requireAccountOwnership(transaction.getAccountId(), ownerUsername);
         return transactionMapper.toDto(transaction);
     }
 
     @Transactional(readOnly = true)
-    public TransactionDto getTransactionByReferenceId(String referenceId) {
+    public TransactionDto getTransactionByReferenceId(String referenceId, String ownerUsername) {
         Transaction transaction = transactionRepository.findByReferenceId(referenceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with reference id: " + referenceId));
+        requireAccountOwnership(transaction.getAccountId(), ownerUsername);
         return transactionMapper.toDto(transaction);
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionsByAccountId(UUID accountId) {
+    public List<TransactionDto> getTransactionsByAccountId(UUID accountId, String ownerUsername) {
+        requireAccountOwnership(accountId, ownerUsername);
         return transactionRepository.findByAccountIdOrderByTimestampDesc(accountId)
                 .stream()
                 .map(transactionMapper::toDto)
@@ -53,7 +64,9 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime, LocalDateTime endTime) {
+    public List<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime,
+                                                                        LocalDateTime endTime, String ownerUsername) {
+        requireAccountOwnership(accountId, ownerUsername);
         return transactionRepository.findByAccountIdAndTimeRange(accountId, startTime, endTime)
                 .stream()
                 .map(transactionMapper::toDto)
@@ -61,9 +74,9 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto deposit(UUID accountId, BigDecimal amount, String referenceId, String description) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    public TransactionDto deposit(UUID accountId, BigDecimal amount, String referenceId, String description,
+                                  String ownerUsername) {
+        Account account = findOwnedAccountForUpdate(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Deposit amount must be positive");
@@ -88,6 +101,8 @@ public class TransactionService {
                 .build();
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+        postBalancedJournal(TransactionType.DEPOSIT, referenceId, description,
+                CLEARING_ACCOUNT_ID, accountId, amount);
         transactionMetrics.incrementDepositCount();
         // Send WebSocket notification
         webSocketService.sendTransactionEvent(accountId, savedTransaction);
@@ -95,9 +110,9 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto withdraw(UUID accountId, BigDecimal amount, String referenceId, String description) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    public TransactionDto withdraw(UUID accountId, BigDecimal amount, String referenceId, String description,
+                                   String ownerUsername) {
+        Account account = findOwnedAccountForUpdate(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Withdrawal amount must be positive");
@@ -126,6 +141,8 @@ public class TransactionService {
                 .build();
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+        postBalancedJournal(TransactionType.WITHDRAWAL, referenceId, description,
+                accountId, CLEARING_ACCOUNT_ID, amount);
         transactionMetrics.incrementWithdrawalCount();
         // Send WebSocket notification
         webSocketService.sendTransactionEvent(accountId, savedTransaction);
@@ -133,12 +150,26 @@ public class TransactionService {
     }
 
     @Transactional
-    public TransactionDto transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String referenceId, String description) {
+    public TransactionDto transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String referenceId,
+                                   String description, String ownerUsername) {
         // Validate accounts
-        Account fromAccount = accountRepository.findById(fromAccountId)
-                .orElseThrow(() -> new ResourceNotFoundException("From account not found with id: " + fromAccountId));
-        Account toAccount = accountRepository.findById(toAccountId)
-                .orElseThrow(() -> new ResourceNotFoundException("To account not found with id: " + toAccountId));
+        if (fromAccountId.equals(toAccountId)) {
+            throw new IllegalArgumentException("Source and destination accounts must be different");
+        }
+
+        java.util.Map<UUID, Account> lockedAccounts = accountRepository
+                .findAllByIdsForUpdate(java.util.List.of(fromAccountId, toAccountId))
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(Account::getId, account -> account));
+        Account fromAccount = lockedAccounts.get(fromAccountId);
+        Account toAccount = lockedAccounts.get(toAccountId);
+        if (fromAccount == null || fromAccount.getOwnerUser() == null
+                || !ownerUsername.equals(fromAccount.getOwnerUser().getUsername())) {
+            throw new ResourceNotFoundException("From account not found with id: " + fromAccountId);
+        }
+        if (toAccount == null) {
+            throw new ResourceNotFoundException("To account not found with id: " + toAccountId);
+        }
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Transfer amount must be positive");
@@ -180,13 +211,49 @@ public class TransactionService {
                 .build();
 
         Transaction savedOutgoing = transactionRepository.save(outgoingTransaction);
-        transactionRepository.save(incomingTransaction);
+        Transaction savedIncoming = transactionRepository.save(incomingTransaction);
+        postBalancedJournal(TransactionType.TRANSFER_OUT, referenceId, description,
+                fromAccountId, toAccountId, amount);
         transactionMetrics.incrementTransferCount();
 
         // Send WebSocket notifications for both accounts
         webSocketService.sendTransactionEvent(fromAccountId, savedOutgoing);
-        webSocketService.sendTransactionEvent(toAccountId, incomingTransaction);
+        webSocketService.sendTransactionEvent(toAccountId, savedIncoming);
 
         return transactionMapper.toDto(savedOutgoing);
+    }
+
+    private Account findOwnedAccountForUpdate(UUID accountId, String ownerUsername) {
+        return accountRepository.findOwnedByIdForUpdate(accountId, ownerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    }
+
+    private void requireAccountOwnership(UUID accountId, String ownerUsername) {
+        if (!accountRepository.existsByIdAndOwnerUser_Username(accountId, ownerUsername)) {
+            throw new ResourceNotFoundException("Transaction not found");
+        }
+    }
+
+    private void postBalancedJournal(TransactionType type, String referenceId, String description,
+                                     UUID debitAccountId, UUID creditAccountId, BigDecimal amount) {
+        LedgerJournal journal = ledgerJournalRepository.save(LedgerJournal.builder()
+                .transactionType(type.name())
+                .referenceId(referenceId)
+                .description(description)
+                .build());
+
+        ledgerEntryRepository.saveAll(java.util.List.of(
+                LedgerEntry.builder()
+                        .journalId(journal.getId())
+                        .accountId(debitAccountId)
+                        .direction(LedgerEntry.Direction.DEBIT)
+                        .amount(amount)
+                        .build(),
+                LedgerEntry.builder()
+                        .journalId(journal.getId())
+                        .accountId(creditAccountId)
+                        .direction(LedgerEntry.Direction.CREDIT)
+                        .amount(amount)
+                        .build()));
     }
 }

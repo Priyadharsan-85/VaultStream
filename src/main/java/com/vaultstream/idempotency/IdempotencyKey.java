@@ -39,6 +39,9 @@ public class IdempotencyKey {
     @Column(name = "response_body", columnDefinition = "TEXT")
     private String responseBody;
 
+    @Column(name = "response_content_type", length = 255)
+    private String responseContentType;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

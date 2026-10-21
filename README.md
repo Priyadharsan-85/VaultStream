@@ -101,7 +101,9 @@ docker-compose up --build
 | `DB_NAME` | Database name | `vaultstream` |
 | `DB_USERNAME` | Database username | `vaultstream_user` |
 | `DB_PASSWORD` | Database password | `vaultstream_pass` |
-| `JWT_SECRET` | Secret key for JWT signing | `change-this-secret-key-in-production` |
+| `JWT_SECRET` | Secret key for JWT signing | Local-development fallback; set a secret in deployments |
+| `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
+| `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
 | `SPRING_MAIL_USERNAME` | Email username for notifications | - |
 | `SPRING_MAIL_PASSWORD` | Email password for notifications | - |
 
@@ -110,7 +112,10 @@ docker-compose up --build
 ### Authentication
 
 - `POST /api/auth/login` - Authenticate user and receive JWT token
+- `POST /api/auth/register` - Register with a username and password, then receive a JWT token
 - `POST /api/auth/logout` - Logout (client-side token disposal)
+
+Set both administrator environment variables to provision the first admin user. Admins can approve or suspend accounts with `PUT /api/admin/accounts/{id}/status`.
 
 ### Accounts
 

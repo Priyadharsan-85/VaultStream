@@ -11,36 +11,77 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class IdempotencyService {
 
+    private static final int PENDING_TIMEOUT_MINUTES = 2;
+
     private final IdempotencyRepository idempotencyRepository;
 
-    @Transactional(readOnly = true)
-    public Optional<String> getResponseIfExists(String key, String method, String path, String parameters) {
-        Optional<IdempotencyKey> existingKey = idempotencyRepository.findByKey(key);
-        if (existingKey.isPresent()) {
-            IdempotencyKey keyEntity = existingKey.get();
-            // Check if it's not expired
-            if (keyEntity.getExpiresAt().isAfter(LocalDateTime.now())) {
-                // Return cached response
-                return Optional.ofNullable(keyEntity.getResponseBody());
+    @Transactional
+    public Reservation reserve(String key, String method, String path, String fingerprint) {
+        Optional<IdempotencyKey> existing = idempotencyRepository.findByKey(key);
+        if (existing.isPresent()) {
+            IdempotencyKey entity = existing.get();
+            boolean expired = !entity.getExpiresAt().isAfter(LocalDateTime.now());
+            boolean abandoned = entity.getResponseCode() == null
+                    && entity.getCreatedAt().plusMinutes(PENDING_TIMEOUT_MINUTES).isBefore(LocalDateTime.now());
+            if (expired || abandoned) {
+                idempotencyRepository.delete(entity);
+                idempotencyRepository.flush();
             } else {
-                // Remove expired key
-                idempotencyRepository.delete(keyEntity);
+                return toReservation(entity, method, path, fingerprint);
             }
         }
-        return Optional.empty();
-    }
 
-    @Transactional
-    public void saveResponse(String key, String method, String path, String parameters,
-                           int responseCode, String responseBody) {
-        IdempotencyKey idempotencyKey = IdempotencyKey.builder()
+        IdempotencyKey reservation = IdempotencyKey.builder()
                 .key(key)
                 .requestMethod(method)
                 .requestPath(path)
-                .requestParameters(parameters)
-                .responseCode(responseCode)
-                .responseBody(responseBody)
+                .requestParameters(fingerprint)
                 .build();
-        idempotencyRepository.save(idempotencyKey);
+        idempotencyRepository.saveAndFlush(reservation);
+        return new Reservation(State.RESERVED, null, null, null);
     }
+
+    @Transactional(readOnly = true)
+    public Reservation lookup(String key, String method, String path, String fingerprint) {
+        return idempotencyRepository.findByKey(key)
+                .map(entity -> toReservation(entity, method, path, fingerprint))
+                .orElseGet(() -> new Reservation(State.RESERVED, null, null, null));
+    }
+
+    @Transactional
+    public void complete(String key, int responseCode, String contentType, String responseBody) {
+        IdempotencyKey entity = idempotencyRepository.findByKey(key)
+                .orElseThrow(() -> new IllegalStateException("Idempotency reservation disappeared"));
+        entity.setResponseCode(responseCode);
+        entity.setResponseContentType(contentType);
+        entity.setResponseBody(responseBody);
+        idempotencyRepository.save(entity);
+    }
+
+    @Transactional
+    public void remove(String key) {
+        idempotencyRepository.findByKey(key).ifPresent(idempotencyRepository::delete);
+    }
+
+    private Reservation toReservation(IdempotencyKey entity, String method, String path, String fingerprint) {
+        if (!entity.getRequestMethod().equals(method)
+                || !entity.getRequestPath().equals(path)
+                || !entity.getRequestParameters().equals(fingerprint)) {
+            return new Reservation(State.CONFLICT, null, null, null);
+        }
+        if (entity.getResponseCode() == null) {
+            return new Reservation(State.IN_PROGRESS, null, null, null);
+        }
+        return new Reservation(State.REPLAY, entity.getResponseCode(), entity.getResponseContentType(),
+                entity.getResponseBody() == null ? "" : entity.getResponseBody());
+    }
+
+    public enum State {
+        RESERVED,
+        REPLAY,
+        CONFLICT,
+        IN_PROGRESS
+    }
+
+    public record Reservation(State state, Integer responseCode, String contentType, String responseBody) { }
 }
