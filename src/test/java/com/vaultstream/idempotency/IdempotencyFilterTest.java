@@ -78,6 +78,10 @@ class IdempotencyFilterTest {
 
     @Test
     void rejectsKeysLongerThanTheLimit() throws Exception {
+        request = new MockHttpServletRequest();
+        request.setMethod("POST");
+        request.setRequestURI(PATH);
+        request.setContentType("application/json");
         request.addHeader("Idempotency-Key", "x".repeat(129));
 
         filter.doFilter(request, response, (req, res) -> fail("chain should not run"));
