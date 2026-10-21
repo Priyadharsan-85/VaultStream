@@ -7,7 +7,11 @@ import com.vaultstream.monitoring.TransactionMetrics;
 import com.vaultstream.model.Account;
 import com.vaultstream.model.Transaction;
 import com.vaultstream.model.Transaction.TransactionType;
+import com.vaultstream.model.LedgerEntry;
+import com.vaultstream.model.LedgerJournal;
 import com.vaultstream.repository.AccountRepository;
+import com.vaultstream.repository.LedgerEntryRepository;
+import com.vaultstream.repository.LedgerJournalRepository;
 import com.vaultstream.repository.TransactionRepository;
 import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +30,13 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
+    private final LedgerJournalRepository ledgerJournalRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
     private final TransactionMapper transactionMapper;
     private final TransactionMetrics transactionMetrics;
     private final WebSocketService webSocketService;
+
+    private static final UUID CLEARING_ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Transactional(readOnly = true)
     public TransactionDto getTransactionById(UUID id, String ownerUsername) {
@@ -93,6 +101,8 @@ public class TransactionService {
                 .build();
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+        postBalancedJournal(TransactionType.DEPOSIT, referenceId, description,
+                CLEARING_ACCOUNT_ID, accountId, amount);
         transactionMetrics.incrementDepositCount();
         // Send WebSocket notification
         webSocketService.sendTransactionEvent(accountId, savedTransaction);
@@ -131,6 +141,8 @@ public class TransactionService {
                 .build();
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+        postBalancedJournal(TransactionType.WITHDRAWAL, referenceId, description,
+                accountId, CLEARING_ACCOUNT_ID, amount);
         transactionMetrics.incrementWithdrawalCount();
         // Send WebSocket notification
         webSocketService.sendTransactionEvent(accountId, savedTransaction);
@@ -199,12 +211,14 @@ public class TransactionService {
                 .build();
 
         Transaction savedOutgoing = transactionRepository.save(outgoingTransaction);
-        transactionRepository.save(incomingTransaction);
+        Transaction savedIncoming = transactionRepository.save(incomingTransaction);
+        postBalancedJournal(TransactionType.TRANSFER_OUT, referenceId, description,
+                fromAccountId, toAccountId, amount);
         transactionMetrics.incrementTransferCount();
 
         // Send WebSocket notifications for both accounts
         webSocketService.sendTransactionEvent(fromAccountId, savedOutgoing);
-        webSocketService.sendTransactionEvent(toAccountId, incomingTransaction);
+        webSocketService.sendTransactionEvent(toAccountId, savedIncoming);
 
         return transactionMapper.toDto(savedOutgoing);
     }
@@ -218,5 +232,28 @@ public class TransactionService {
         if (!accountRepository.existsByIdAndOwnerUser_Username(accountId, ownerUsername)) {
             throw new ResourceNotFoundException("Transaction not found");
         }
+    }
+
+    private void postBalancedJournal(TransactionType type, String referenceId, String description,
+                                     UUID debitAccountId, UUID creditAccountId, BigDecimal amount) {
+        LedgerJournal journal = ledgerJournalRepository.save(LedgerJournal.builder()
+                .transactionType(type.name())
+                .referenceId(referenceId)
+                .description(description)
+                .build());
+
+        ledgerEntryRepository.saveAll(java.util.List.of(
+                LedgerEntry.builder()
+                        .journalId(journal.getId())
+                        .accountId(debitAccountId)
+                        .direction(LedgerEntry.Direction.DEBIT)
+                        .amount(amount)
+                        .build(),
+                LedgerEntry.builder()
+                        .journalId(journal.getId())
+                        .accountId(creditAccountId)
+                        .direction(LedgerEntry.Direction.CREDIT)
+                        .amount(amount)
+                        .build()));
     }
 }

@@ -94,7 +94,11 @@ public class AccountService {
     public void deleteAccount(UUID id, String ownerUsername) {
         Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
-        accountRepository.delete(account);
+        if (account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
+            throw new IllegalStateException("Account must have a zero balance before it can be closed");
+        }
+        account.setStatus(AccountStatus.CLOSED);
+        accountRepository.save(account);
         accountMetrics.incrementAccountDeletedCount();
     }
 
