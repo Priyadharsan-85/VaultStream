@@ -40,9 +40,9 @@ class LedgerHealthIndicatorTest {
 
         // Assert
         assertEquals(Status.UP, health.getStatus());
-        assertEquals("operational", health.getDetail("ledger_status"));
-        assertEquals(10L, health.getDetail("accounts"));
-        assertEquals(25L, health.getDetail("transactions"));
+        assertEquals("operational", health.getDetails().get("ledger_status"));
+        assertEquals(10L, health.getDetails().get("accounts"));
+        assertEquals(25L, health.getDetails().get("transactions"));
         verify(accountRepository).count();
         verify(transactionRepository).count();
     }
@@ -58,9 +58,9 @@ class LedgerHealthIndicatorTest {
 
         // Assert
         assertEquals(Status.DOWN, health.getStatus());
-        assertTrue(health.getDetail("error").toString().contains("Database connection failed"));
+        assertTrue(health.getDetails().get("error").toString().contains("Database connection failed"));
         verify(accountRepository).count();
-        verify(transactionRepository).count();
+        verifyNoInteractions(transactionRepository);
     }
 
     @Test
@@ -74,7 +74,7 @@ class LedgerHealthIndicatorTest {
 
         // Assert
         assertEquals(Status.DOWN, health.getStatus());
-        assertTrue(health.getDetail("error").toString().contains("Query timeout"));
+        assertTrue(health.getDetails().get("error").toString().contains("Query timeout"));
         verify(accountRepository).count();
         verify(transactionRepository).count();
     }
@@ -91,9 +91,9 @@ class LedgerHealthIndicatorTest {
         // Assert
         assertEquals(Status.DOWN, health.getStatus());
         // Should contain one of the error messages
-        assertTrue(health.getDetail("error").toString().contains("Account DB error") ||
-                   health.getDetail("error").toString().contains("Transaction DB error"));
+        assertTrue(health.getDetails().get("error").toString().contains("Account DB error") ||
+                   health.getDetails().get("error").toString().contains("Transaction DB error"));
         verify(accountRepository).count();
-        verify(transactionRepository).count();
+        verifyNoInteractions(transactionRepository);
     }
 }
