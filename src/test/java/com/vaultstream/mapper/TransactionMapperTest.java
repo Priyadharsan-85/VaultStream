@@ -32,7 +32,7 @@ class TransactionMapperTest {
                 .id(transactionId)
                 .accountId(accountId)
                 .amount(BigDecimal.valueOf(100.00))
-                .type(TransactionType.DEPOSIT)
+                .type(Transaction.TransactionType.DEPOSIT)
                 .referenceId("REF123")
                 .description("Test transaction")
                 .timestamp(now)
@@ -76,7 +76,7 @@ class TransactionMapperTest {
         assertEquals(transactionId, transaction.getId());
         assertEquals(accountId, transaction.getAccountId());
         assertEquals(BigDecimal.valueOf(100.00), transaction.getAmount());
-        assertEquals(TransactionType.WITHDRAWAL, transaction.getType());
+        assertEquals(Transaction.TransactionType.WITHDRAWAL, transaction.getType());
         assertEquals("REF456", transaction.getReferenceId());
         assertEquals("Test transaction dto", transaction.getDescription());
         assertEquals(now, transaction.getTimestamp());
