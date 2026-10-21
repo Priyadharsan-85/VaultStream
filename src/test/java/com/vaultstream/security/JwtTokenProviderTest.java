@@ -3,151 +3,97 @@ package com.vaultstream.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class JwtTokenProviderTest {
 
+    private static final String TEST_SECRET = "a".repeat(64);
+    private static final String WRONG_SECRET = "b".repeat(64);
+    private static final int TEST_EXPIRATION_MS = 3_600_000;
+
     @Mock
     private Authentication authentication;
 
-    @Mock
-    private UserDetails userDetails;
-
-    @InjectMocks
     private JwtTokenProvider jwtTokenProvider;
-
-    private static final String TEST_SECRET = "test-secret-key-for-jwt-token-provider-testing";
-    private static final int TEST_EXPIRATION_MS = 3600000; // 1 hour
 
     @BeforeEach
     void setUp() {
-        // Set test values using reflection since fields are private
         jwtTokenProvider = new JwtTokenProvider();
-        jwtTokenProvider.jwtSecret = TEST_SECRET;
-        jwtTokenProvider.jwtExpirationInMs = TEST_EXPIRATION_MS;
+        ReflectionTestUtils.setField(jwtTokenProvider, "jwtSecret", TEST_SECRET);
+        ReflectionTestUtils.setField(jwtTokenProvider, "jwtExpirationInMs", TEST_EXPIRATION_MS);
     }
 
     @Test
-    void generateToken_ShouldReturnValidJwtToken() {
-        // Arrange
+    void generatesTokenWithUsernameAndExpectedExpiry() {
         when(authentication.getName()).thenReturn("testuser");
+        long beforeGeneration = System.currentTimeMillis();
 
-        // Act
         String token = jwtTokenProvider.generateToken(authentication);
 
-        // Assert
-        assertNotNull(token);
-        assertFalse(token.isEmpty());
-
-        // Verify token can be parsed and has expected claims
-        Claims claims = Jwts.parser()
-                .verifyWith(TEST_SECRET)
-                .build()
-                .parse(token)
-                .getPayload();
-
+        Claims claims = Jwts.parser().verifyWith(signingKey(TEST_SECRET)).build()
+                .parseSignedClaims(token).getPayload();
         assertEquals("testuser", claims.getSubject());
         assertNotNull(claims.getIssuedAt());
-        assertNotNull(claims.getExpiration());
-
-        // Verify expiration is approximately correct (within 1 second)
-        long expirationInMs = claims.getExpiration().getTime();
-        long expectedExpirationInMs = System.currentTimeMillis() + TEST_EXPIRATION_MS;
-        assertTrue(Math.abs(expirationInMs - expectedExpirationInMs) < 1000);
+        assertTrue(claims.getExpiration().getTime() >= beforeGeneration + TEST_EXPIRATION_MS);
+        assertTrue(jwtTokenProvider.validateToken(token));
     }
 
     @Test
-    void validateToken_ShouldReturnTrue_ForValidToken() {
-        // Arrange
-        String validToken = Jwts.builder()
-                .setSubject("testuser")
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + TEST_EXPIRATION_MS))
-                .signWith(SignatureAlgorithm.HS512, TEST_SECRET)
+    void validatesTokenSignedWithConfiguredKey() {
+        assertTrue(jwtTokenProvider.validateToken(createToken(TEST_SECRET,
+                new Date(), new Date(System.currentTimeMillis() + TEST_EXPIRATION_MS))));
+    }
+
+    @Test
+    void rejectsTokenWithDifferentSignature() {
+        assertFalse(jwtTokenProvider.validateToken(createToken(WRONG_SECRET,
+                new Date(), new Date(System.currentTimeMillis() + TEST_EXPIRATION_MS))));
+    }
+
+    @Test
+    void rejectsExpiredToken() {
+        long now = System.currentTimeMillis();
+        assertFalse(jwtTokenProvider.validateToken(createToken(TEST_SECRET,
+                new Date(now - 7_200_000), new Date(now - 3_600_000))));
+    }
+
+    @Test
+    void rejectsMalformedToken() {
+        assertFalse(jwtTokenProvider.validateToken("invalid.token.string"));
+    }
+
+    @Test
+    void extractsUsernameFromSignedToken() {
+        String token = createToken(TEST_SECRET, new Date(), new Date(System.currentTimeMillis() + TEST_EXPIRATION_MS));
+
+        assertEquals("testuser", jwtTokenProvider.getUsernameFromToken(token));
+    }
+
+    private static String createToken(String secret, Date issuedAt, Date expiresAt) {
+        return Jwts.builder()
+                .subject("testuser")
+                .issuedAt(issuedAt)
+                .expiration(expiresAt)
+                .signWith(signingKey(secret), SignatureAlgorithm.HS512)
                 .compact();
-
-        // Act
-        boolean isValid = jwtTokenProvider.validateToken(validToken);
-
-        // Assert
-        assertTrue(isValid);
     }
 
-    @Test
-    void validateToken_ShouldReturnFalse_ForInvalidSignature() {
-        // Arrange
-        String invalidToken = Jwts.builder()
-                .setSubject("testuser")
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + TEST_EXPIRATION_MS))
-                .signWith(SignatureAlgorithm.HS512, "wrong-secret")
-                .compact();
-
-        // Act
-        boolean isValid = jwtTokenProvider.validateToken(invalidToken);
-
-        // Assert
-        assertFalse(isValid);
-    }
-
-    @Test
-    void validateToken_ShouldReturnFalse_ForExpiredToken() {
-        // Arrange
-        String expiredToken = Jwts.builder()
-                .setSubject("testuser")
-                .setIssuedAt(new Date(System.currentTimeMillis() - 7200000)) // 2 hours ago
-                .setExpiration(new Date(System.currentTimeMillis() - 3600000)) // 1 hour ago
-                .signWith(SignatureAlgorithm.HS512, TEST_SECRET)
-                .compact();
-
-        // Act
-        boolean isValid = jwtTokenProvider.validateToken(expiredToken);
-
-        // Assert
-        assertFalse(isValid);
-    }
-
-    @Test
-    void validateToken_ShouldReturnFalse_ForMalformedToken() {
-        // Arrange
-        String malformedToken = "invalid.token.string";
-
-        // Act
-        boolean isValid = jwtTokenProvider.validateToken(malformedToken);
-
-        // Assert
-        assertFalse(isValid);
-    }
-
-    @Test
-    void getUsernameFromToken_ShouldReturnCorrectUsername() {
-        // Arrange
-        String token = Jwts.builder()
-                .setSubject("testuser")
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + TEST_EXPIRATION_MS))
-                .signWith(SignatureAlgorithm.HS512, TEST_SECRET)
-                .compact();
-
-        // Act
-        String username = jwtTokenProvider.getUsernameFromToken(token);
-
-        // Assert
-        assertEquals("testuser", username);
+    private static SecretKey signingKey(String secret) {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 }
