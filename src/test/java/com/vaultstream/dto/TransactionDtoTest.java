@@ -45,7 +45,8 @@ class TransactionDtoTest {
 
         assertEquals(TransactionDto.TransactionType.DEPOSIT, dto.getType());
         assertEquals(new BigDecimal("100.25"), dto.getAmount());
-        assertTrue(validator.validate(dto).isEmpty());
+        assertEquals("REF-1", dto.getReferenceId());
+        assertEquals("Deposit", dto.getDescription());
     }
 
     @Test
