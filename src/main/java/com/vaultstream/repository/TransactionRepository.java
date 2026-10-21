@@ -27,5 +27,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Optional<Transaction> findByReferenceId(String referenceId);
 
-    BigDecimal sumAmountByAccountIdAndType(UUID accountId, String type);
+    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE account_id = :accountId AND type = :type",
+            nativeQuery = true)
+    BigDecimal sumAmountByAccountIdAndType(@Param("accountId") UUID accountId, @Param("type") String type);
 }

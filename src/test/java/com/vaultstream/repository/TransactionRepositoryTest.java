@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(org.springframework.test.context.junit.jupiter.SpringExtension.class)
 @DataJpaTest
-@Import(TransactionRepository.class)
+@ActiveProfiles("test")
 class TransactionRepositoryTest {
 
     @Autowired
@@ -263,7 +263,7 @@ class TransactionRepositoryTest {
         BigDecimal withdrawalSum = transactionRepository.sumAmountByAccountIdAndType(accountId, "WITHDRAWAL");
 
         // Assert
-        assertEquals(BigDecimal.valueOf(150.00), depositSum);
-        assertEquals(BigDecimal.valueOf(30.00), withdrawalSum);
+        assertEquals(0, BigDecimal.valueOf(150.00).compareTo(depositSum));
+        assertEquals(0, BigDecimal.valueOf(30.00).compareTo(withdrawalSum));
     }
 }

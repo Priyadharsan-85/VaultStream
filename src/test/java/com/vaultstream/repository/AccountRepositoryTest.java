@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(org.springframework.test.context.junit.jupiter.SpringExtension.class)
 @DataJpaTest
-@Import(AccountRepository.class)
+@ActiveProfiles("test")
 class AccountRepositoryTest {
 
     @Autowired
@@ -49,6 +49,8 @@ class AccountRepositoryTest {
         Account account = Account.builder()
                 .accountNumber("TEST123456")
                 .accountHolderName("Test User")
+                .balance(java.math.BigDecimal.ZERO)
+                .status(Account.AccountStatus.ACTIVE)
                 .build();
 
         // Act
@@ -68,6 +70,8 @@ class AccountRepositoryTest {
         Account account = Account.builder()
                 .accountNumber("EXISTENT123")
                 .accountHolderName("Test User")
+                .balance(java.math.BigDecimal.ZERO)
+                .status(Account.AccountStatus.ACTIVE)
                 .build();
         accountRepository.save(account);
 
@@ -84,6 +88,8 @@ class AccountRepositoryTest {
         Account account = Account.builder()
                 .accountNumber("FOUND456")
                 .accountHolderName("Test User")
+                .balance(java.math.BigDecimal.ZERO)
+                .status(Account.AccountStatus.ACTIVE)
                 .build();
         accountRepository.save(account);
 
