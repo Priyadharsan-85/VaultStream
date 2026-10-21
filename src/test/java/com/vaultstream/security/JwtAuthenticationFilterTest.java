@@ -62,6 +62,7 @@ class JwtAuthenticationFilterTest {
         when(jwtTokenProvider.validateToken(VALID_TOKEN)).thenReturn(true);
         when(jwtTokenProvider.getUsernameFromToken(VALID_TOKEN)).thenReturn(TEST_USERNAME);
         when(userDetailsService.loadUserByUsername(TEST_USERNAME)).thenReturn(userDetails);
+        when(userDetails.getUsername()).thenReturn(TEST_USERNAME);
 
         // Act
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);

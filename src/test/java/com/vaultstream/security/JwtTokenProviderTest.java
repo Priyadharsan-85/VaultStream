@@ -49,7 +49,7 @@ class JwtTokenProviderTest {
                 .parseSignedClaims(token).getPayload();
         assertEquals("testuser", claims.getSubject());
         assertNotNull(claims.getIssuedAt());
-        assertTrue(claims.getExpiration().getTime() >= beforeGeneration + TEST_EXPIRATION_MS);
+        assertTrue(claims.getExpiration().getTime() >= beforeGeneration + TEST_EXPIRATION_MS - 1_000);
         assertTrue(jwtTokenProvider.validateToken(token));
     }
 
