@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/accounts/**").authenticated()
                 .requestMatchers("/api/transactions/**").authenticated()
                 .requestMatchers("/actuator/**").permitAll()
