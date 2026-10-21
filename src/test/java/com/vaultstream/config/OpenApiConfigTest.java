@@ -38,7 +38,7 @@ class OpenApiConfigTest {
             assertNotNull(openApi.getComponents());
             SecurityScheme securityScheme = openApi.getComponents().getSecuritySchemes().get("bearerAuth");
             assertNotNull(securityScheme);
-            assertEquals("http", securityScheme.getType());
+            assertEquals(SecurityScheme.Type.HTTP, securityScheme.getType());
             assertEquals("bearer", securityScheme.getScheme());
             assertEquals("JWT", securityScheme.getBearerFormat());
 
