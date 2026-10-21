@@ -38,7 +38,7 @@ class WebSocketServiceTest {
         transactionDto.setId(transactionId);
         transactionDto.setAccountId(accountId);
         transactionDto.setAmount(new BigDecimal("100.00"));
-        transactionDto.setType(TransactionType.DEPOSIT);
+        transactionDto.setType(TransactionDto.TransactionType.DEPOSIT);
         transactionDto.setDescription("Test deposit");
         transactionDto.setTimestamp(LocalDateTime.now());
         transactionDto.setReferenceId("REF123");
