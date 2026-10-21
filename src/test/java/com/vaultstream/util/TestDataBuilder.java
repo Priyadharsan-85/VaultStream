@@ -5,7 +5,6 @@ import com.vaultstream.dto.TransactionDto;
 import com.vaultstream.model.Account;
 import com.vaultstream.model.Transaction;
 import com.vaultstream.model.Account.AccountStatus;
-import com.vaultstream.model.Transaction.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -25,7 +24,7 @@ public class TestDataBuilder {
                 .accountNumber("ACC" + UUID.randomUUID().toString().substring(0, 8))
                 .accountHolderName("Test Account Holder")
                 .balance(BigDecimal.valueOf(1000.00))
-                .status(AccountStatus.ACTIVE);
+                .status(AccountDto.AccountStatus.ACTIVE);
     }
 
     public static Account.AccountBuilder account() {
@@ -51,46 +50,25 @@ public class TestDataBuilder {
     }
 
     public static TransactionDto.DepositRequest depositRequest(UUID accountId) {
-        return TransactionDto.DepositRequest.builder()
-                .accountId(accountId)
-                .amount(BigDecimal.valueOf(100.00))
-                .referenceId("DEP-" + UUID.randomUUID().toString().substring(0, 8))
-                .description("Test deposit")
-                .build();
+        return new TransactionDto.DepositRequest(accountId, BigDecimal.valueOf(100.00),
+                "DEP-" + UUID.randomUUID().toString().substring(0, 8), "Test deposit");
     }
 
     public static TransactionDto.WithdrawRequest withdrawRequest(UUID accountId) {
-        return TransactionDto.WithdrawRequest.builder()
-                .accountId(accountId)
-                .amount(BigDecimal.valueOf(50.00))
-                .referenceId("WDL-" + UUID.randomUUID().toString().substring(0, 8))
-                .description("Test withdrawal")
-                .build();
+        return new TransactionDto.WithdrawRequest(accountId, BigDecimal.valueOf(50.00),
+                "WDL-" + UUID.randomUUID().toString().substring(0, 8), "Test withdrawal");
     }
 
     public static TransactionDto.TransferRequest transferRequest(UUID fromAccountId, UUID toAccountId) {
-        return TransactionDto.TransferRequest.builder()
-                .fromAccountId(fromAccountId)
-                .toAccountId(toAccountId)
-                .amount(BigDecimal.valueOf(75.00))
-                .referenceId("XFER-" + UUID.randomUUID().toString().substring(0, 8))
-                .description("Test transfer")
-                .build();
+        return new TransactionDto.TransferRequest(fromAccountId, toAccountId, BigDecimal.valueOf(75.00),
+                "XFER-" + UUID.randomUUID().toString().substring(0, 8), "Test transfer");
     }
 
     public static AccountDto.DepositRequest accountDepositRequest(UUID accountId) {
-        return AccountDto.DepositRequest.builder()
-                .amount(BigDecimal.valueOf(100.00))
-                .referenceId("ACC-DEP-" + UUID.randomUUID().toString().substring(0, 8))
-                .description("Test account deposit")
-                .build();
+        return new AccountDto.DepositRequest(BigDecimal.valueOf(100.00));
     }
 
     public static AccountDto.WithdrawRequest accountWithdrawRequest(UUID accountId) {
-        return AccountDto.WithdrawRequest.builder()
-                .amount(BigDecimal.valueOf(50.00))
-                .referenceId("ACC-WDL-" + UUID.randomUUID().toString().substring(0, 8))
-                .description("Test account withdrawal")
-                .build();
+        return new AccountDto.WithdrawRequest(BigDecimal.valueOf(50.00));
     }
 }
