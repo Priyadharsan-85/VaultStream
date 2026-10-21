@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vaultstream.auth.AuthDto.LoginRequest;
 import com.vaultstream.auth.AuthDto.LoginResponse;
 import com.vaultstream.security.JwtTokenProvider;
+import com.vaultstream.repository.AppUserRepository;
+import com.vaultstream.idempotency.IdempotencyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,9 +14,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 @WebMvcTest(AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired
@@ -39,6 +45,15 @@ class AuthControllerTest {
 
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @MockBean
+    private AppUserRepository appUserRepository;
+
+    @MockBean
+    private PasswordEncoder passwordEncoder;
+
+    @MockBean
+    private IdempotencyService idempotencyService;
 
     @MockBean
     private com.vaultstream.service.AccountService accountService;
@@ -70,7 +85,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(validLoginRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("test-jwt-token"))
-                .andExpect(jsonPath("$.errorMessage").isEmpty());
+                .andExpect(jsonPath("$.errorMessage").doesNotExist());
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(jwtTokenProvider).generateToken(mockAuthentication);
@@ -80,14 +95,14 @@ class AuthControllerTest {
     void login_ShouldReturnError_WhenInvalidCredentialsProvided() throws Exception {
         // Arrange
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new RuntimeException("Invalid credentials"));
+                .thenThrow(new BadCredentialsException("Invalid credentials"));
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidLoginRequest)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.token").isEmpty())
+                .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(jsonPath("$.errorMessage").value("Invalid credentials"));
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
