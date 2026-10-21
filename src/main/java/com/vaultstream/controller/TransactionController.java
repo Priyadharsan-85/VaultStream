@@ -3,14 +3,19 @@ package com.vaultstream.controller;
 import com.vaultstream.dto.TransactionDto;
 import com.vaultstream.service.TransactionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 import java.security.Principal;
 
@@ -35,20 +40,31 @@ public class TransactionController {
     }
 
     @GetMapping("/account/{accountId}")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByAccountId(@PathVariable UUID accountId, Principal principal) {
-        List<TransactionDto> transactions = transactionService.getTransactionsByAccountId(accountId, principal.getName());
+    public ResponseEntity<Page<TransactionDto>> getTransactionsByAccountId(
+            @PathVariable UUID accountId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            Principal principal) {
+        Page<TransactionDto> transactions = transactionService.getTransactionsByAccountId(
+                accountId, principal.getName(), transactionPage(page, size));
         return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/account/{accountId}/range")
-    public ResponseEntity<List<TransactionDto>> getTransactionsByAccountIdAndTimeRange(
+    public ResponseEntity<Page<TransactionDto>> getTransactionsByAccountIdAndTimeRange(
             @PathVariable UUID accountId,
             @RequestParam LocalDateTime startTime,
             @RequestParam LocalDateTime endTime,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             Principal principal) {
-        List<TransactionDto> transactions = transactionService.getTransactionsByAccountIdAndTimeRange(
-                accountId, startTime, endTime, principal.getName());
+        Page<TransactionDto> transactions = transactionService.getTransactionsByAccountIdAndTimeRange(
+                accountId, startTime, endTime, principal.getName(), transactionPage(page, size));
         return ResponseEntity.ok(transactions);
+    }
+
+    private Pageable transactionPage(int page, int size) {
+        return PageRequest.of(page, size, Sort.by(Sort.Order.desc("timestamp"), Sort.Order.desc("id")));
     }
 
     @PostMapping("/deposit")

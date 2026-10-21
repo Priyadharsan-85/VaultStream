@@ -5,6 +5,8 @@ import com.vaultstream.model.Transaction.TransactionType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -48,21 +50,23 @@ class TransactionRepositoryTest {
     }
 
     @Test
-    void findByAccountIdOrderByTimestampDesc_ShouldReturnEmptyList_WhenNoTransactionsExist() {
+    void findByAccountIdOrderByTimestampDesc_ShouldReturnEmptyPage_WhenNoTransactionsExist() {
         // Act
-        List<Transaction> result = transactionRepository.findByAccountIdOrderByTimestampDesc(UUID.randomUUID());
+        Page<Transaction> result = transactionRepository.findByAccountIdOrderByTimestampDescIdDesc(
+                UUID.randomUUID(), PageRequest.of(0, 20));
 
         // Assert
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void findByAccountIdAndTimeRange_ShouldReturnEmptyList_WhenNoTransactionsExist() {
+    void findByAccountIdAndTimeRange_ShouldReturnEmptyPage_WhenNoTransactionsExist() {
         // Act
-        List<Transaction> result = transactionRepository.findByAccountIdAndTimeRange(
+        Page<Transaction> result = transactionRepository.findByAccountIdAndTimeRange(
                 UUID.randomUUID(),
                 LocalDateTime.now().minusDays(1),
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                PageRequest.of(0, 20)
         );
 
         // Assert
@@ -174,13 +178,14 @@ class TransactionRepositoryTest {
         transactionRepository.save(newerTransaction);
 
         // Act
-        List<Transaction> result = transactionRepository.findByAccountIdOrderByTimestampDesc(accountId);
+        Page<Transaction> result = transactionRepository.findByAccountIdOrderByTimestampDescIdDesc(
+                accountId, PageRequest.of(0, 20));
 
         // Assert
         assertFalse(result.isEmpty());
-        assertEquals(2, result.size());
-        assertEquals("NEWER", result.get(0).getReferenceId()); // Most recent first
-        assertEquals("OLDER", result.get(1).getReferenceId()); // Older second
+        assertEquals(2, result.getContent().size());
+        assertEquals("NEWER", result.getContent().get(0).getReferenceId()); // Most recent first
+        assertEquals("OLDER", result.getContent().get(1).getReferenceId()); // Older second
     }
 
     @Test
@@ -217,16 +222,17 @@ class TransactionRepositoryTest {
         transactionRepository.save(futureTransaction);
 
         // Act
-        List<Transaction> result = transactionRepository.findByAccountIdAndTimeRange(
+        Page<Transaction> result = transactionRepository.findByAccountIdAndTimeRange(
                 accountId,
                 now.minusDays(1),
-                now.plusHours(1)
+                now.plusHours(1),
+                PageRequest.of(0, 20)
         );
 
         // Assert
         assertFalse(result.isEmpty());
-        assertEquals(1, result.size()); // Only the recent transaction should be in range
-        assertEquals("RECENT", result.get(0).getReferenceId());
+        assertEquals(1, result.getContent().size()); // Only the recent transaction should be in range
+        assertEquals("RECENT", result.getContent().get(0).getReferenceId());
     }
 
     @Test

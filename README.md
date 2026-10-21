@@ -132,11 +132,15 @@ Set both administrator environment variables to provision the first admin user. 
 
 - `GET /api/transactions/{id}` - Get transaction by ID
 - `GET /api/transactions/reference/{referenceId}` - Get transaction by reference ID
-- `GET /api/transactions/account/{accountId}` - Get transactions for account
-- `GET /api/transactions/account/{accountId}/range` - Get transactions for account in time range
+- `GET /api/transactions/account/{accountId}` - Get a page of transactions for an account
+- `GET /api/transactions/account/{accountId}/range` - Get a page of transactions in a time range
 - `POST /api/transactions/deposit` - Create deposit transaction
 - `POST /api/transactions/withdraw` - Create withdrawal transaction
 - `POST /api/transactions/transfer` - Create transfer transaction
+
+Transaction history endpoints accept `page` (zero-based, default `0`) and `size` (default `20`, maximum `100`) query parameters. Results are ordered newest first and include page metadata such as `totalElements` and `totalPages`.
+
+Example: `GET /api/transactions/account/{accountId}?page=0&size=20`
 
 ### Monitoring & Health
 

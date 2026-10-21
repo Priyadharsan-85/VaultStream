@@ -10,6 +10,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -75,30 +80,33 @@ class TransactionControllerTest {
 
     @Test
     void getTransactionsByAccountIdPassesAuthenticatedOwner() {
-        List<TransactionDto> transactions = List.of(transaction);
-        when(transactionService.getTransactionsByAccountId(accountId, USERNAME)).thenReturn(transactions);
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("timestamp"), Sort.Order.desc("id")));
+        Page<TransactionDto> transactions = new PageImpl<>(List.of(transaction), pageable, 1);
+        when(transactionService.getTransactionsByAccountId(accountId, USERNAME, pageable)).thenReturn(transactions);
 
-        ResponseEntity<List<TransactionDto>> response = transactionController.getTransactionsByAccountId(accountId, principal);
+        ResponseEntity<Page<TransactionDto>> response = transactionController
+                .getTransactionsByAccountId(accountId, 0, 20, principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertSame(transactions, response.getBody());
-        verify(transactionService).getTransactionsByAccountId(accountId, USERNAME);
+        verify(transactionService).getTransactionsByAccountId(accountId, USERNAME, pageable);
     }
 
     @Test
     void getTransactionsByAccountIdAndTimeRangePassesOwnerAndRange() {
         LocalDateTime start = LocalDateTime.now().minusDays(1);
         LocalDateTime end = start.plusHours(1);
-        List<TransactionDto> transactions = List.of(transaction);
-        when(transactionService.getTransactionsByAccountIdAndTimeRange(accountId, start, end, USERNAME))
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("timestamp"), Sort.Order.desc("id")));
+        Page<TransactionDto> transactions = new PageImpl<>(List.of(transaction), pageable, 1);
+        when(transactionService.getTransactionsByAccountIdAndTimeRange(accountId, start, end, USERNAME, pageable))
                 .thenReturn(transactions);
 
-        ResponseEntity<List<TransactionDto>> response = transactionController
-                .getTransactionsByAccountIdAndTimeRange(accountId, start, end, principal);
+        ResponseEntity<Page<TransactionDto>> response = transactionController
+                .getTransactionsByAccountIdAndTimeRange(accountId, start, end, 0, 20, principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertSame(transactions, response.getBody());
-        verify(transactionService).getTransactionsByAccountIdAndTimeRange(accountId, start, end, USERNAME);
+        verify(transactionService).getTransactionsByAccountIdAndTimeRange(accountId, start, end, USERNAME, pageable);
     }
 
     @Test

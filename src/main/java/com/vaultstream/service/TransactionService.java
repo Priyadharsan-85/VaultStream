@@ -16,6 +16,8 @@ import com.vaultstream.repository.TransactionRepository;
 import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -55,22 +57,19 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionsByAccountId(UUID accountId, String ownerUsername) {
+    public Page<TransactionDto> getTransactionsByAccountId(UUID accountId, String ownerUsername, Pageable pageable) {
         requireAccountOwnership(accountId, ownerUsername);
-        return transactionRepository.findByAccountIdOrderByTimestampDesc(accountId)
-                .stream()
-                .map(transactionMapper::toDto)
-                .collect(Collectors.toList());
+        return transactionRepository.findByAccountIdOrderByTimestampDescIdDesc(accountId, pageable)
+                .map(transactionMapper::toDto);
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime,
-                                                                        LocalDateTime endTime, String ownerUsername) {
+    public Page<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime,
+                                                                        LocalDateTime endTime, String ownerUsername,
+                                                                        Pageable pageable) {
         requireAccountOwnership(accountId, ownerUsername);
-        return transactionRepository.findByAccountIdAndTimeRange(accountId, startTime, endTime)
-                .stream()
-                .map(transactionMapper::toDto)
-                .collect(Collectors.toList());
+        return transactionRepository.findByAccountIdAndTimeRange(accountId, startTime, endTime, pageable)
+                .map(transactionMapper::toDto);
     }
 
     @Transactional
