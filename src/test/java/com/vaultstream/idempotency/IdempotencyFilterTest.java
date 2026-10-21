@@ -2,341 +2,162 @@ package com.vaultstream.idempotency;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.Ordered;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class IdempotencyFilterTest {
 
+    private static final String PATH = "/api/accounts";
+    private static final String KEY = "request-key-123";
+
     @Mock
     private IdempotencyService idempotencyService;
 
-    @Mock
-    private ObjectMapper objectMapper;
-
-    @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpServletResponse response;
-
-    @Mock
-    private FilterChain filterChain;
-
-    @InjectMocks
-    private IdempotencyFilter idempotencyFilter;
-
-    private static final String IDEMPOTENCY_KEY = "test-idempotency-key-123";
-    private static final String POST_METHOD = "POST";
-    private static final String GET_METHOD = "GET";
-    private static final String PUT_METHOD = "PUT";
-    private static final String PATCH_METHOD = "PATCH";
-    private static final String DELETE_METHOD = "DELETE";
-    private static final String TEST_PATH = "/api/accounts";
-    private static final String TEST_RESPONSE = "{\"result\": \"success\"}";
+    private IdempotencyFilter filter;
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
 
     @BeforeEach
     void setUp() {
-        // Mock the Ordered.HIGHEST_PRECEDENCE constant
-        // We can't easily mock this, but we can verify the filter behaves correctly
+        filter = new IdempotencyFilter(idempotencyService, new ObjectMapper());
+        request = new MockHttpServletRequest();
+        request.setMethod("POST");
+        request.setRequestURI(PATH);
+        request.setContentType("application/json");
+        request.setContent("{\"account\":1}".getBytes(StandardCharsets.UTF_8));
+        request.addHeader("Idempotency-Key", KEY);
+        response = new MockHttpServletResponse();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("test-user", "", List.of()));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
-    void doFilter_ShouldContinueNormally_WhenMethodIsNotIdempotent() throws Exception {
-        // Arrange
-        when(request.getMethod()).thenReturn(GET_METHOD);
+    void passesThroughReadRequestsWithoutReserving() throws Exception {
+        request.setMethod("GET");
+        FilterChain chain = (req, res) -> ((HttpServletResponse) res).setStatus(204);
 
-        // Act
-        idempotencyFilter.doFilter(request, response, filterChain);
+        filter.doFilter(request, response, chain);
 
-        // Assert
-        verify(filterChain).doFilter(request, response);
-        verify(idempotencyService, never()).getResponseIfExists(any(), any(), any(), any());
-        verify(idempotencyService, never()).saveResponse(any(), any(), any(), any(), any(), any());
+        assertEquals(204, response.getStatus());
+        verifyNoInteractions(idempotencyService);
     }
 
     @Test
-    void doFilter_ShouldContinueNormally_WhenNoIdempotencyKeyProvided() throws Exception {
-        // Arrange
-        when(request.getMethod()).thenReturn(POST_METHOD);
-        when(request.getHeader("Idempotency-Key")).thenReturn(null);
+    void passesThroughWriteRequestsWithoutIdempotencyKey() throws Exception {
+        request.removeHeader("Idempotency-Key");
 
-        // Act
-        idempotencyFilter.doFilter(request, response, filterChain);
+        filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(204));
 
-        // Assert
-        verify(filterChain).doFilter(request, response);
-        verify(idempotencyService, never()).getResponseIfExists(any(), any(), any(), any());
-        verify(idempotencyService, never()).saveResponse(any(), any(), any(), any(), any(), any());
+        assertEquals(204, response.getStatus());
+        verifyNoInteractions(idempotencyService);
     }
 
     @Test
-    void doFilter_ShouldContinueNormally_WhenBlankIdempotencyKeyProvided() throws Exception {
-        // Arrange
-        when(request.getMethod()).thenReturn(POST_METHOD);
-        when(request.getHeader("Idempotency-Key")).thenReturn("   "); // Blank/whitespace only
+    void rejectsKeysLongerThanTheLimit() throws Exception {
+        request.addHeader("Idempotency-Key", "x".repeat(129));
 
-        // Act
-        idempotencyFilter.doFilter(request, response, filterChain);
+        filter.doFilter(request, response, (req, res) -> fail("chain should not run"));
 
-        // Assert
-        verify(filterChain).doFilter(request, response);
-        verify(idempotencyService, never()).getResponseIfExists(any(), any(), any(), any());
-        verify(idempotencyService, never()).saveResponse(any(), any(), any(), any(), any(), any());
+        assertEquals(400, response.getStatus());
+        verifyNoInteractions(idempotencyService);
     }
 
     @Test
-    void doFilter_ShouldReturnCachedResponse_WhenValidCachedResponseExists() throws Exception {
-        // Arrange
-        when(request.getMethod()).thenReturn(POST_METHOD);
-        when(request.getHeader("Idempotency-Key")).thenReturn(IDEMPOTENCY_KEY);
-        when(request.getRequestURI()).thenReturn(TEST_PATH);
+    void replaysCompletedRequestsWithoutCallingChain() throws Exception {
+        when(idempotencyService.reserve(anyString(), eq("POST"), eq(PATH), anyString()))
+                .thenReturn(new IdempotencyService.Reservation(
+                        IdempotencyService.State.REPLAY, 201, "application/json", "{\"created\":true}"));
 
-        // Mock the cache key generation
-        String expectedCacheKey = IDEMPOTENCY_KEY + ":" + POST_METHOD + ":" + TEST_PATH;
-        when(idempotencyService.getResponseIfExists(
-                eq(expectedCacheKey),
-                eq(POST_METHOD),
-                eq(TEST_PATH),
-                eq(""))).thenReturn(Optional.of(TEST_RESPONSE));
+        filter.doFilter(request, response, (req, res) -> fail("replay should not call chain"));
 
-        // Act
-        idempotencyFilter.doFilter(request, response, filterChain);
-
-        // Assert
-        verify(response).setStatus(200);
-        verify(response).setContentType("application/json");
-        // Verify the response was written
-        verify(response.getWriter()).write(TEST_RESPONSE);
-        verify(filterChain, never()).doFilter(any(), any());
-        verify(idempotencyService).getResponseIfExists(
-                eq(expectedCacheKey),
-                eq(POST_METHOD),
-                eq(TEST_PATH),
-                eq(""));
-        verify(idempotencyService, never()).saveResponse(any(), any(), any(), any(), any(), any());
+        assertEquals(201, response.getStatus());
+        assertEquals("application/json", response.getContentType());
+        assertEquals("{\"created\":true}", response.getContentAsString());
+        verify(idempotencyService).reserve(anyString(), eq("POST"), eq(PATH), anyString());
     }
 
     @Test
-    void doFilter_ShouldCacheSuccessfulResponse_WhenNoCachedResponseExists() throws Exception {
-        // Arrange
-        when(request.getMethod()).thenReturn(POST_METHOD);
-        when(request.getHeader("Idempotency-Key")).thenReturn(IDEMPOTENCY_KEY);
-        when(request.getRequestURI()).thenReturn(TEST_PATH);
+    void rejectsRequestsWhenKeyWasUsedForDifferentRequest() throws Exception {
+        when(idempotencyService.reserve(anyString(), eq("POST"), eq(PATH), anyString()))
+                .thenReturn(new IdempotencyService.Reservation(IdempotencyService.State.CONFLICT, null, null, null));
 
-        // Mock the cache key generation
-        String expectedCacheKey = IDEMPOTENCY_KEY + ":" + POST_METHOD + ":" + TEST_PATH;
-        when(idempotencyService.getResponseIfExists(
-                eq(expectedCacheKey),
-                eq(POST_METHOD),
-                eq(TEST_PATH),
-                eq(""))).thenReturn(Optional.empty());
+        filter.doFilter(request, response, (req, res) -> fail("conflict should not call chain"));
 
-        // Act
-        idempotencyFilter.doFilter(request, response, filterChain);
-
-        // Assert
-        verify(filterChain).doFilter(request, response);
-        // Verify that saveResponse was called after the filter chain
-        verify(idempotencyService).saveResponse(
-                eq(expectedCacheKey),
-                eq(POST_METHOD),
-                eq(TEST_PATH),
-                eq(""),
-                eq(200), // Assuming default status
-                anyString()); // Any response body
-        verify(idempotencyService).getResponseIfExists(
-                eq(expectedCacheKey),
-                eq(POST_METHOD),
-                eq(TEST_PATH),
-                eq(""));
+        assertEquals(409, response.getStatus());
+        verify(idempotencyService).reserve(anyString(), eq("POST"), eq(PATH), anyString());
     }
 
     @Test
-    void doFilter_ShouldNotCacheErrorResponse_WhenStatusIs5xx() throws Exception {
-        // Arrange
-        when(request.getMethod()).thenReturn(POST_METHOD);
-        when(request.getHeader("Idempotency-Key")).thenReturn(IDEMPOTENCY_KEY);
-        when(request.getRequestURI()).thenReturn(TEST_PATH);
+    void rejectsRequestsWhileSameKeyIsStillProcessing() throws Exception {
+        when(idempotencyService.reserve(anyString(), eq("POST"), eq(PATH), anyString()))
+                .thenReturn(new IdempotencyService.Reservation(IdempotencyService.State.IN_PROGRESS, null, null, null));
 
-        // Mock the cache key generation
-        String expectedCacheKey = IDEMPOTENCY_KEY + ":" + POST_METHOD + ":" + TEST_PATH;
-        when(idempotencyService.getResponseIfExists(
-                eq(expectedCacheKey),
-                eq(POST_METHOD),
-                eq(TEST_PATH),
-                eq(""))).thenReturn(Optional.empty());
+        filter.doFilter(request, response, (req, res) -> fail("in-progress request should not call chain"));
 
-        // Mock the response wrapper to return error status
-        // This is tricky to mock properly, so we'll test the logic indirectly
-
-        // Act
-        idempotencyFilter.doFilter(request, response, filterChain);
-
-        // Assert
-        verify(filterChain).doFilter(request, response);
-        // The key point is that saveResponse should still be called,
-        // but the actual implementation checks the status before saving
-        // Since we're mocking the filter chain, we can't easily test the status check
-        // In a real test with the wrapper, we'd verify that saveResponse is NOT called for 5xx
+        assertEquals(409, response.getStatus());
     }
 
     @Test
-    void isIdempotentMethod_ShouldReturnTrue_ForPostMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod(POST_METHOD);
+    void completesReservationAfterSuccessfulResponse() throws Exception {
+        when(idempotencyService.reserve(anyString(), eq("POST"), eq(PATH), anyString()))
+                .thenReturn(new IdempotencyService.Reservation(IdempotencyService.State.RESERVED, null, null, null));
 
-        // Assert
-        assertTrue(result);
+        filter.doFilter(request, response, (req, res) -> {
+            HttpServletResponse wrapped = (HttpServletResponse) res;
+            wrapped.setStatus(201);
+            wrapped.setContentType("application/json");
+            wrapped.getWriter().write("{\"created\":true}");
+        });
+
+        assertEquals(201, response.getStatus());
+        assertEquals("{\"created\":true}", response.getContentAsString());
+        verify(idempotencyService).complete(anyString(), eq(201), eq("application/json"), eq("{\"created\":true}"));
+        verify(idempotencyService, never()).remove(anyString());
     }
 
     @Test
-    void isIdempotentMethod_ShouldReturnTrue_ForPutMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod(PUT_METHOD);
+    void removesReservationAfterServerError() throws Exception {
+        when(idempotencyService.reserve(anyString(), eq("POST"), eq(PATH), anyString()))
+                .thenReturn(new IdempotencyService.Reservation(IdempotencyService.State.RESERVED, null, null, null));
 
-        // Assert
-        assertTrue(result);
+        filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(500));
+
+        verify(idempotencyService).remove(anyString());
+        verify(idempotencyService, never()).complete(anyString(), anyInt(), any(), any());
     }
 
     @Test
-    void isIdempotentMethod_ShouldReturnTrue_ForPatchMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod(PATCH_METHOD);
+    void removesReservationWhenChainThrows() throws Exception {
+        when(idempotencyService.reserve(anyString(), eq("POST"), eq(PATH), anyString()))
+                .thenReturn(new IdempotencyService.Reservation(IdempotencyService.State.RESERVED, null, null, null));
 
-        // Assert
-        assertTrue(result);
-    }
+        org.junit.jupiter.api.Assertions.assertThrows(IOException.class,
+                () -> filter.doFilter(request, response, (req, res) -> { throw new IOException("failed"); }));
 
-    @Test
-    void isIdempotentMethod_ShouldReturnFalse_ForGetMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod(GET_METHOD);
-
-        // Assert
-        assertFalse(result);
-    }
-
-    @Test
-    void isIdempotentMethod_ShouldReturnFalse_ForDeleteMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod(DELETE_METHOD);
-
-        // Assert
-        assertFalse(result);
-    }
-
-    @Test
-    void isIdempotentMethod_ShouldReturnFalse_ForNullMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod(null);
-
-        // Assert
-        assertFalse(result);
-    }
-
-    @Test
-    void isIdempotentMethod_ShouldReturnFalse_ForEmptyMethod() {
-        // Act
-        boolean result = idempotencyFilter.isIdempotentMethod("");
-
-        // Assert
-        assertFalse(result);
-    }
-
-    @Test
-    void isIdempotentMethod_ShouldBeCaseInsensitive() {
-        // Act & Assert
-        assertTrue(idempotencyFilter.isIdempotentMethod("post"));
-        assertTrue(idempotencyFilter.isIdempotentMethod("Post"));
-        assertTrue(idempotencyFilter.isIdempotentMethod("pOsT"));
-        assertTrue(idempotencyFilter.isIdempotentMethod("put"));
-        assertTrue(idempotencyFilter.isIdempotentMethod("Put"));
-        assertTrue(idempotencyFilter.isIdempotentMethod("patch"));
-        assertTrue(idempotencyFilter.isIdempotentMethod("Patch"));
-    }
-
-    @Test
-    void generateCacheKey_ShouldGenerateCorrectKey() {
-        // Arrange
-        when(request.getMethod()).thenReturn(POST_METHOD);
-        when(request.getRequestURI()).thenReturn(TEST_PATH);
-
-        // Act
-        String cacheKey = idempotencyFilter.generateCacheKey(request, IDEMPOTENCY_KEY);
-
-        // Assert
-        assertEquals(IDEMPOTENCY_KEY + ":" + POST_METHOD + ":" + TEST_PATH, cacheKey);
-    }
-
-    @Test
-    void getQueryString_ShouldReturnEmptyString_WhenNoParameters() throws Exception {
-        // Arrange
-        when(request.getParameterMap()).thenReturn(java.util.Collections.emptyMap());
-
-        // Act
-        String queryString = idempotencyFilter.getQueryString(request);
-
-        // Assert
-        assertEquals("", queryString);
-    }
-
-    @Test
-    void getQueryString_ShouldReturnCorrectQueryString_WhenSingleParameter() throws Exception {
-        // Arrange
-        java.util.Map<String, String[]> paramMap = new java.util.HashMap<>();
-        paramMap.put("page", new String[]{"1"});
-        when(request.getParameterMap()).thenReturn(paramMap);
-
-        // Act
-        String queryString = idempotencyFilter.getQueryString(request);
-
-        // Assert
-        assertEquals("page=1", queryString);
-    }
-
-    @Test
-    void getQueryString_ShouldReturnCorrectQueryString_WhenMultipleParameters() throws Exception {
-        // Arrange
-        java.util.Map<String, String[]> paramMap = new java.util.HashMap<>();
-        paramMap.put("page", new String[]{"1"});
-        paramMap.put("limit", new String[]{"10", "20"}); // Multiple values
-        when(request.getParameterMap()).thenReturn(paramMap);
-
-        // Act
-        String queryString = idempotencyFilter.getQueryString(request);
-
-        // Assert
-        assertEquals("page=1&limit=10,20", queryString);
-    }
-
-    @Test
-    void getQueryString_ShouldHandleSpecialCharacters() throws Exception {
-        // Arrange
-        java.util.Map<String, String[]> paramMap = new java.util.HashMap<>();
-        paramMap.put("name", new String[]{"John Doe"});
-        paramMap.put("email", new String[]{"john@example.com"});
-        when(request.getParameterMap()).thenReturn(paramMap);
-
-        // Act
-        String queryString = idempotencyFilter.getQueryString(request);
-
-        // Assert
-        assertEquals("name=John Doe&email=john@example.com", queryString);
+        verify(idempotencyService).remove(anyString());
     }
 }
