@@ -11,6 +11,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -77,14 +82,15 @@ class AccountControllerTest {
 
     @Test
     void getAllAccountsPassesAuthenticatedOwner() {
-        List<AccountDto> accounts = List.of(account);
-        when(accountService.getAllAccounts(USERNAME)).thenReturn(accounts);
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        Page<AccountDto> accounts = new PageImpl<>(List.of(account), pageable, 1);
+        when(accountService.getAllAccounts(USERNAME, pageable)).thenReturn(accounts);
 
-        ResponseEntity<List<AccountDto>> response = accountController.getAllAccounts(principal);
+        ResponseEntity<Page<AccountDto>> response = accountController.getAllAccounts(0, 20, principal);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertSame(accounts, response.getBody());
-        verify(accountService).getAllAccounts(USERNAME);
+        verify(accountService).getAllAccounts(USERNAME, pageable);
     }
 
     @Test

@@ -121,12 +121,14 @@ Set both administrator environment variables to provision the first admin user. 
 
 - `GET /api/accounts/{id}` - Get account by ID
 - `GET /api/accounts/number/{accountNumber}` - Get account by account number
-- `GET /api/accounts` - Get all accounts
+- `GET /api/accounts` - Get a page of the authenticated user's accounts
 - `POST /api/accounts` - Create new account
 - `PUT /api/accounts/{id}` - Update account
 - `DELETE /api/accounts/{id}` - Delete account
 - `POST /api/accounts/{id}/deposit` - Deposit funds
 - `POST /api/accounts/{id}/withdraw` - Withdraw funds
+
+Account and transaction history endpoints accept `page` (zero-based, default `0`) and `size` (default `20`, maximum `100`) query parameters. Results include page metadata such as `totalElements` and `totalPages`.
 
 ### Transactions
 
@@ -138,9 +140,7 @@ Set both administrator environment variables to provision the first admin user. 
 - `POST /api/transactions/withdraw` - Create withdrawal transaction
 - `POST /api/transactions/transfer` - Create transfer transaction
 
-Transaction history endpoints accept `page` (zero-based, default `0`) and `size` (default `20`, maximum `100`) query parameters. Results are ordered newest first and include page metadata such as `totalElements` and `totalPages`.
-
-Example: `GET /api/transactions/account/{accountId}?page=0&size=20`
+Example transaction history request: `GET /api/transactions/account/{accountId}?page=0&size=20`
 
 ### Monitoring & Health
 

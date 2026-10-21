@@ -2,6 +2,8 @@ package com.vaultstream.repository;
 
 import com.vaultstream.model.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,7 +28,7 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     Optional<Account> findByAccountNumberAndOwnerUser_Username(String accountNumber, String username);
 
-    java.util.List<Account> findAllByOwnerUser_UsernameOrderByCreatedAtDesc(String username);
+    Page<Account> findAllByOwnerUser_UsernameOrderByCreatedAtDescIdDesc(String username, Pageable pageable);
 
     boolean existsByIdAndOwnerUser_Username(UUID id, String username);
 

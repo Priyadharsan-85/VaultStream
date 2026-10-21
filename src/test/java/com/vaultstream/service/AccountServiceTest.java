@@ -13,6 +13,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -56,11 +60,14 @@ class AccountServiceTest {
     void getAllAccountsReturnsOnlyOwnerAccounts() {
         Account account = Account.builder().id(UUID.randomUUID()).build();
         AccountDto dto = AccountDto.builder().id(account.getId()).build();
-        when(accountRepository.findAllByOwnerUser_UsernameOrderByCreatedAtDesc("alice")).thenReturn(List.of(account));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(accountRepository.findAllByOwnerUser_UsernameOrderByCreatedAtDescIdDesc("alice", pageable))
+                .thenReturn(new PageImpl<>(List.of(account), pageable, 1));
         when(accountMapper.toDto(account)).thenReturn(dto);
 
-        assertEquals(List.of(dto), accountService.getAllAccounts("alice"));
-        verify(accountRepository).findAllByOwnerUser_UsernameOrderByCreatedAtDesc("alice");
+        Page<AccountDto> result = accountService.getAllAccounts("alice", pageable);
+        assertEquals(List.of(dto), result.getContent());
+        verify(accountRepository).findAllByOwnerUser_UsernameOrderByCreatedAtDescIdDesc("alice", pageable);
     }
 
     @Test

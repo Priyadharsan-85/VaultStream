@@ -4,7 +4,13 @@ import com.vaultstream.dto.AccountDto;
 import com.vaultstream.service.AccountService;
 import com.vaultstream.service.TransactionService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -36,8 +42,13 @@ public class AccountController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AccountDto>> getAllAccounts(Principal principal) {
-        List<AccountDto> accounts = accountService.getAllAccounts(principal.getName());
+    public ResponseEntity<Page<AccountDto>> getAllAccounts(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            Principal principal) {
+        Pageable pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
+        Page<AccountDto> accounts = accountService.getAllAccounts(principal.getName(), pageable);
         return ResponseEntity.ok(accounts);
     }
 
