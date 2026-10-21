@@ -4,6 +4,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -52,7 +53,7 @@ class OpenApiConfigTest {
     void openApiConfig_shouldCreateGroupedOpenApiBean() {
         // Arrange & Act
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(OpenApiConfig.class)) {
-            io.swagger.v3.oas.models.GroupedOpenApi groupedOpenApi = context.getBean(io.swagger.v3.oas.models.GroupedOpenApi.class);
+            GroupedOpenApi groupedOpenApi = context.getBean(GroupedOpenApi.class);
 
             // Assert
             assertNotNull(groupedOpenApi);

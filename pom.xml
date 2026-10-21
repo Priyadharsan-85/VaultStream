@@ -131,7 +131,12 @@
             <version>${spring-boot.version}</version>
         </dependency>
 
-        <!-- Springdoc OpenAPI UI removed due to dependency issues -->
+        <!-- OpenAPI documentation and Swagger UI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
+        </dependency>
 
         <!-- MapStruct -->
         <dependency>
