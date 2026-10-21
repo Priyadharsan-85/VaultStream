@@ -1,5 +1,6 @@
 package com.vaultstream.dto;
 
+import com.vaultstream.dto.AccountDto.AccountStatus;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
