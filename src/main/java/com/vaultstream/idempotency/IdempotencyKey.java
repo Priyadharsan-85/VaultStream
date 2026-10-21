@@ -7,9 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "idempotency_keys", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "key")
-})
+@Table(name = "idempotency_keys")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,7 +19,7 @@ public class IdempotencyKey {
     @GeneratedValue
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(name = "\"key\"", nullable = false, unique = true, length = 255)
     private String key;
 
     @Column(name = "request_method", nullable = false)
