@@ -67,6 +67,9 @@ public class TransactionService {
     public Page<TransactionDto> getTransactionsByAccountIdAndTimeRange(UUID accountId, LocalDateTime startTime,
                                                                         LocalDateTime endTime, String ownerUsername,
                                                                         Pageable pageable) {
+        if (startTime == null || endTime == null || endTime.isBefore(startTime)) {
+            throw new IllegalArgumentException("endTime must be equal to or later than startTime");
+        }
         requireAccountOwnership(accountId, ownerUsername);
         return transactionRepository.findByAccountIdAndTimeRange(accountId, startTime, endTime, pageable)
                 .map(transactionMapper::toDto);
