@@ -2,7 +2,6 @@ package com.vaultstream.monitoring;
 
 import com.vaultstream.repository.AccountRepository;
 import com.vaultstream.repository.TransactionRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,15 +25,11 @@ class LedgerHealthIndicatorTest {
     @InjectMocks
     private LedgerHealthIndicator ledgerHealthIndicator;
 
-    @BeforeEach
-    void setUp() {
-        // Mock repository behavior
-        when(accountRepository.count()).thenReturn(10L);
-        when(transactionRepository.count()).thenReturn(25L);
-    }
-
     @Test
     void health_ShouldReturnUpStatus_WhenRepositoriesAreAccessible() {
+        when(accountRepository.count()).thenReturn(10L);
+        when(transactionRepository.count()).thenReturn(25L);
+
         // Act
         Health health = ledgerHealthIndicator.health();
 
@@ -51,7 +46,6 @@ class LedgerHealthIndicatorTest {
     void health_ShouldReturnDownStatus_WhenAccountRepositoryThrowsException() {
         // Arrange
         when(accountRepository.count()).thenThrow(new RuntimeException("Database connection failed"));
-        when(transactionRepository.count()).thenReturn(25L);
 
         // Act
         Health health = ledgerHealthIndicator.health();
@@ -83,7 +77,6 @@ class LedgerHealthIndicatorTest {
     void health_ShouldReturnDownStatus_WhenBothRepositoriesThrowException() {
         // Arrange
         when(accountRepository.count()).thenThrow(new RuntimeException("Account DB error"));
-        when(transactionRepository.count()).thenThrow(new RuntimeException("Transaction DB error"));
 
         // Act
         Health health = ledgerHealthIndicator.health();
