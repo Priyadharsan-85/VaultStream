@@ -75,7 +75,7 @@ class AccountMapperTest {
         assertEquals("TEST123456", account.getAccountNumber());
         assertEquals("Test User", account.getAccountHolderName());
         assertEquals(BigDecimal.valueOf(1000.00), account.getBalance());
-        assertEquals(AccountStatus.ACTIVE, account.getStatus());
+        assertEquals(Account.AccountStatus.ACTIVE, account.getStatus());
         assertEquals(now, account.getCreatedAt());
         assertEquals(now, account.getUpdatedAt());
     }
