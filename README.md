@@ -161,7 +161,7 @@ VaultStream supports idempotency keys to prevent duplicate processing of request
 1. Include the `Idempotency-Key` header in your POST, PUT, or PATCH requests
 2. The key should be unique for each request (UUID recommended)
 3. The same key with the same method and path will return the cached response
-4. Idempotency keys expire after 24 hours
+4. Idempotency keys expire after 24 hours and expired records are cleaned up hourly
 
 Example:
 ```http
