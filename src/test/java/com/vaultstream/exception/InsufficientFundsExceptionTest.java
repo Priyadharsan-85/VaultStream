@@ -16,7 +16,7 @@ class InsufficientFundsExceptionTest {
 
         // Assert
         assertEquals(testMessage, exception.getMessage());
-        assertEquals("Insufficient funds for withdrawal", exception.toString());
+        assertEquals("com.vaultstream.exception.InsufficientFundsException: " + testMessage, exception.toString());
     }
 
     @Test

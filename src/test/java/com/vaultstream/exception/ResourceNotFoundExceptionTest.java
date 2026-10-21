@@ -16,7 +16,7 @@ class ResourceNotFoundExceptionTest {
 
         // Assert
         assertEquals(testMessage, exception.getMessage());
-        assertEquals("Account not found with id: 123", exception.toString());
+        assertEquals("com.vaultstream.exception.ResourceNotFoundException: " + testMessage, exception.toString());
     }
 
     @Test
