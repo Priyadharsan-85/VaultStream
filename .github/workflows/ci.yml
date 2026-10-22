@@ -36,6 +36,15 @@ jobs:
       - name: Build production container
         run: docker build --tag vaultstream:ci .
 
+      - name: Scan production container
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: vaultstream:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
   codeql:
     name: Source security scan
     runs-on: ubuntu-latest
