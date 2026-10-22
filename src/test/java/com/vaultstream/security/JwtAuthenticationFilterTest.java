@@ -15,6 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import com.vaultstream.security.TokenRevocationService;
 
 import java.io.IOException;
 
@@ -29,6 +30,9 @@ class JwtAuthenticationFilterTest {
 
     @Mock
     private UserDetailsService userDetailsService;
+
+    @Mock
+    private TokenRevocationService tokenRevocationService;
 
     @Mock
     private HttpServletRequest request;

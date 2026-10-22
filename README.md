@@ -113,7 +113,7 @@ docker-compose up --build
 
 - `POST /api/auth/login` - Authenticate user and receive JWT token
 - `POST /api/auth/register` - Register with a username and password, then receive a JWT token
-- `POST /api/auth/logout` - Logout (client-side token disposal)
+- `POST /api/auth/logout` - Revoke the current bearer token
 
 Set both administrator environment variables to provision the first admin user. Admins can approve or suspend accounts with `PUT /api/admin/accounts/{id}/status`.
 
@@ -184,6 +184,7 @@ All API endpoints (except `/api/auth/**` and actuator endpoints) require JWT aut
 1. Obtain a token by calling `/api/auth/login` with username and password
 2. Include the token in the Authorization header: `Bearer <token>`
 3. Tokens expire after 1 hour (configurable)
+4. Call `/api/auth/logout` with the bearer token to revoke it immediately
 
 ## Monitoring & Observability
 

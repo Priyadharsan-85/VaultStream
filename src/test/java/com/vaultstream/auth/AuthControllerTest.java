@@ -6,6 +6,7 @@ import com.vaultstream.auth.AuthDto.LoginResponse;
 import com.vaultstream.security.JwtTokenProvider;
 import com.vaultstream.repository.AppUserRepository;
 import com.vaultstream.idempotency.IdempotencyService;
+import com.vaultstream.security.TokenRevocationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,9 @@ class AuthControllerTest {
 
     @MockBean
     private IdempotencyService idempotencyService;
+
+    @MockBean
+    private TokenRevocationService tokenRevocationService;
 
     @MockBean
     private com.vaultstream.service.AccountService accountService;
@@ -167,7 +171,7 @@ class AuthControllerTest {
     @Test
     void logout_ShouldReturnOkResponse() throws Exception {
         // Act & Assert
-        mockMvc.perform(post("/api/auth/logout"))
+        mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer test-jwt-token"))
                 .andExpect(status().isOk());
     }
 }

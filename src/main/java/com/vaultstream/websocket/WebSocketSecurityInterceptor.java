@@ -2,6 +2,7 @@ package com.vaultstream.websocket;
 
 import com.vaultstream.repository.AccountRepository;
 import com.vaultstream.security.JwtTokenProvider;
+import com.vaultstream.security.TokenRevocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class WebSocketSecurityInterceptor implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenRevocationService tokenRevocationService;
     private final UserDetailsService userDetailsService;
     private final AccountRepository accountRepository;
 
@@ -51,7 +53,7 @@ public class WebSocketSecurityInterceptor implements ChannelInterceptor {
         }
 
         String token = authorization.substring(7);
-        if (!jwtTokenProvider.validateToken(token)) {
+        if (!jwtTokenProvider.validateToken(token) || tokenRevocationService.isRevoked(token)) {
             throw new IllegalArgumentException("Invalid bearer token");
         }
 

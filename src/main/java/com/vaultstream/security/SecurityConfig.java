@@ -26,6 +26,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsServiceImpl userDetailsService;
+    private final TokenRevocationService tokenRevocationService;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
 
@@ -49,6 +50,7 @@ public class SecurityConfig {
             .sessionManagement(sessionManagement -> sessionManagement
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/api/auth/logout").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/api/accounts/**").authenticated()
@@ -63,6 +65,6 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
+        return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService, tokenRevocationService);
     }
 }

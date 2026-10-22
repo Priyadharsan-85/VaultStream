@@ -2,6 +2,7 @@ package com.vaultstream.auth;
 
 import com.vaultstream.model.AppUser;
 import com.vaultstream.security.JwtTokenProvider;
+import com.vaultstream.security.TokenRevocationService;
 import com.vaultstream.repository.AppUserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenRevocationService tokenRevocationService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthDto.LoginResponse> register(@Valid @RequestBody AuthDto.RegisterRequest request) {
@@ -62,9 +64,12 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        // In a stateless JWT implementation, logout is handled client-side by discarding the token
-        // For a more sophisticated implementation, you could maintain a token blacklist
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorization) {
+        String token = authorization.startsWith("Bearer ") ? authorization.substring(7).trim() : "";
+        if (token.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "A bearer token is required to log out");
+        }
+        tokenRevocationService.revoke(token);
         return ResponseEntity.ok().build();
     }
 }

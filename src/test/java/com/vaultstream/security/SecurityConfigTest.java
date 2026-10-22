@@ -23,6 +23,8 @@ class SecurityConfigTest {
     @Mock
     private UserDetailsServiceImpl userDetailsService;
     @Mock
+    private TokenRevocationService tokenRevocationService;
+    @Mock
     private JwtAuthenticationEntryPoint authenticationEntryPoint;
     @Mock
     private JwtAccessDeniedHandler accessDeniedHandler;
@@ -32,7 +34,8 @@ class SecurityConfigTest {
     @BeforeEach
     void setUp() {
         securityConfig = new SecurityConfig(
-                jwtTokenProvider, userDetailsService, authenticationEntryPoint, accessDeniedHandler);
+                jwtTokenProvider, userDetailsService, tokenRevocationService,
+                authenticationEntryPoint, accessDeniedHandler);
     }
 
     @Test
