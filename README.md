@@ -83,7 +83,7 @@ mvn spring-boot:run
 
 The application will start on `http://localhost:8080/api`
 
-### Running with Docker
+### Running locally with Docker
 
 ```bash
 # Build and start all services
@@ -91,6 +91,32 @@ docker-compose up --build
 
 # The application will be available at http://localhost:8080/api
 ```
+
+### Production deployment
+
+The production stack is separate from the local development stack. It runs the app with the `prod` profile, requires credentials and a JWT signing secret, persists PostgreSQL data in a named volume, and binds the app to localhost by default. Put a host-based HTTPS reverse proxy in front of it before exposing the service publicly.
+
+Create a `.env` file (keep it out of version control) with:
+
+```dotenv
+DB_NAME=vaultstream
+DB_USERNAME=vaultstream_user
+DB_PASSWORD=replace-with-a-long-random-database-password
+JWT_SECRET=replace-with-at-least-64-random-bytes
+VAULTSTREAM_ADMIN_USERNAME=admin
+VAULTSTREAM_ADMIN_PASSWORD=replace-with-a-unique-password-of-12-to-72-characters
+# Optional: change the local bind address/port when configuring a reverse proxy.
+APP_BIND_ADDRESS=127.0.0.1
+APP_PORT=8081
+```
+
+Generate a signing secret with `openssl rand -base64 64`, then start the stack:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+```
+
+The app starts only after PostgreSQL reports healthy. Flyway applies schema migrations on startup. PostgreSQL is not published to the host, and the app container runs as a non-root user with a read-only filesystem. Back up the PostgreSQL volume using a tested database backup and restore process before handling real data.
 
 ### Environment Variables
 
@@ -104,8 +130,7 @@ docker-compose up --build
 | `JWT_SECRET` | Secret key for JWT signing | Local-development fallback; set a secret in deployments |
 | `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
 | `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
-| `SPRING_MAIL_USERNAME` | Email username for notifications | - |
-| `SPRING_MAIL_PASSWORD` | Email password for notifications | - |
+Production deployments must set `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `VAULTSTREAM_ADMIN_USERNAME`, and `VAULTSTREAM_ADMIN_PASSWORD` in the environment or `.env` file. Do not use the local development defaults in a deployed environment.
 
 ## API Endpoints
 
@@ -205,7 +230,7 @@ Run the test suite:
 mvn test
 ```
 
-## Building for Production
+## Building an image manually
 
 Create a production Docker image:
 
@@ -213,7 +238,7 @@ Create a production Docker image:
 docker build -t vaultstream:latest .
 ```
 
-Or use Docker Compose:
+For production, use the production Compose stack above. The default Compose file is for local development:
 
 ```bash
 docker-compose build

@@ -1,0 +1,64 @@
+services:
+  vaultstream-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Set DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  vaultstream-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vaultstream:production
+    restart: unless-stopped
+    init: true
+    depends_on:
+      vaultstream-db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://vaultstream-db:5432/${DB_NAME:?Set DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set a strong JWT_SECRET}
+      VAULTSTREAM_ADMIN_USERNAME: ${VAULTSTREAM_ADMIN_USERNAME:?Set VAULTSTREAM_ADMIN_USERNAME}
+      VAULTSTREAM_ADMIN_PASSWORD: ${VAULTSTREAM_ADMIN_PASSWORD:?Set VAULTSTREAM_ADMIN_PASSWORD}
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8081}:8081"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  backend:
+    internal: true

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vaultstream}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
       maximum-pool-size: 20
       connection-timeout: 30000
@@ -16,17 +16,6 @@ spring:
       hibernate:
         format_sql: false
         use_sql_comments: false
-  mail:
-    host: ${SPRING_MAIL_HOST:localhost}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME}
-    password: ${SPRING_MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
   thymeleaf:
     cache: true
 
@@ -75,10 +64,4 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"
   file:
-    name: ${LOG_PATH:./logs/vaultstream.log}
-    max-size: 10MB
-    max-history: 30
-    total-size-cap: 100MB
-    # JSON logging for production (uncomment if using logstash-logback-encoder)
-    # charset: UTF-8
-    # flushImmediately: true
+    name: /tmp/vaultstream.log

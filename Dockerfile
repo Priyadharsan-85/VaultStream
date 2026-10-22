@@ -1,21 +1,17 @@
-# Use OpenJDK JDK image with Maven installed
-FROM eclipse-temurin:17-jdk-alpine
+FROM maven:3.9-eclipse-temurin-17 AS build
 
-# Install Maven
-RUN apk add --no-cache maven
-
-# Set the working directory
-WORKDIR /app
-
-# Copy the pom.xml and source code
+WORKDIR /workspace
 COPY pom.xml .
 COPY src ./src
+RUN mvn -B -DskipTests package
 
-# Package the application
-RUN mvn clean package -DskipTests
+FROM eclipse-temurin:17-jre-alpine
 
-# Expose the port the app runs on
+RUN addgroup -S vaultstream && adduser -S vaultstream -G vaultstream
+WORKDIR /app
+COPY --from=build --chown=vaultstream:vaultstream /workspace/target/vaultstream-1.0.0.jar /app/app.jar
+
+USER vaultstream
 EXPOSE 8081
-
-# Run the application
-ENTRYPOINT ["java", "-jar", "target/vaultstream-1.0.0.jar"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 CMD wget -q -O - http://127.0.0.1:8081/actuator/health >/dev/null || exit 1
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
