@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/accounts/**").authenticated()
                 .requestMatchers("/api/transactions/**").authenticated()
                 .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/actuator/prometheus").permitAll()
                 .requestMatchers("/actuator/**").hasRole("ADMIN")
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated())

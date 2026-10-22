@@ -148,7 +148,7 @@ Example transaction history request: `GET /api/transactions/account/{accountId}?
 - `GET /actuator/metrics` - Application metrics (admin token required)
 - `GET /actuator/info` - Application information (admin token required)
 
-The Prometheus and log-file actuator endpoints also require an administrator JWT.
+The Prometheus scrape endpoint remains available to the configured scraper. Keep it behind a trusted network or reverse proxy when deploying publicly. The log-file endpoint requires an administrator JWT.
 
 ## API Documentation
 
@@ -181,7 +181,7 @@ Content-Type: application/json
 
 ## Security
 
-Login, registration, API documentation, and basic health status are public. Logout and all other API endpoints require JWT authentication; actuator endpoints other than basic health require an administrator JWT:
+Login, registration, API documentation, basic health status, and the Prometheus scrape endpoint are public. Logout and all other API endpoints require JWT authentication; actuator endpoints other than basic health and Prometheus require an administrator JWT:
 
 1. Obtain a token by calling `/api/auth/login` with username and password
 2. Include the token in the Authorization header: `Bearer <token>`
