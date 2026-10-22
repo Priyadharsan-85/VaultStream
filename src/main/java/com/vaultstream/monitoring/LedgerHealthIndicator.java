@@ -27,7 +27,8 @@ public class LedgerHealthIndicator implements HealthIndicator {
                     .withDetail("ledger_status", "operational")
                     .build();
         } catch (Exception e) {
-            return Health.down(e)
+            return Health.down()
+                    .withException(e)
                     .withDetail("error", e.getMessage())
                     .build();
         }
