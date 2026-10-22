@@ -11,7 +11,7 @@ VaultStream is a microservices-based banking backend implementing double-entry a
 - **RESTful API**: Clean, well-documented endpoints for account and transaction management
 - **JWT authentication**: Secure token-based authentication for API access
 - **Docker support**: Easy containerization and deployment
-- **Production ready**: Includes monitoring, health checks, and comprehensive error handling
+- **Operational safeguards**: Health monitoring, hardened containers, backup tooling, and automated security checks
 - **Spring Boot 3.x**: Modern Java framework with excellent performance
 - **PostgreSQL**: Robust, scalable relational database
 - **Micrometer metrics**: Built-in monitoring and observability
@@ -20,7 +20,7 @@ VaultStream is a microservices-based banking backend implementing double-entry a
 ## Technology Stack
 
 - **Language**: Java 17
-- **Framework**: Spring Boot 3.2.0
+- **Framework**: Spring Boot 3.5.16
 - **Database**: PostgreSQL 15
 - **Build Tool**: Maven
 - **Containerization**: Docker & Docker Compose
@@ -94,7 +94,7 @@ docker-compose up --build
 
 ### Production deployment
 
-The production stack is separate from the local development stack. It runs the app with the `prod` profile, requires credentials and a JWT signing secret, persists PostgreSQL data in a named volume, and binds the app to localhost by default. Put a host-based HTTPS reverse proxy in front of it before exposing the service publicly.
+The production stack is separate from the local development stack. It runs the app with the `prod` profile, requires credentials and mounted secret files, persists PostgreSQL data in a named volume, and binds the app to localhost by default. Put a host-based HTTPS reverse proxy in front of it before exposing the service publicly.
 
 Create secret files outside version control, then create a `.env` file:
 
