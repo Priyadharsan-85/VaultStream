@@ -10,6 +10,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "accounts", uniqueConstraints = {
         @UniqueConstraint(columnNames = "account_number")
+}, indexes = {
+        @Index(name = "idx_accounts_owner_created_id", columnList = "owner_user_id, created_at, id")
 })
 @Getter
 @Setter
