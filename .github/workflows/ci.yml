@@ -32,3 +32,6 @@ jobs:
 
       - name: Verify project
         run: mvn --batch-mode --no-transfer-progress verify
+
+      - name: Build production container
+        run: docker build --tag vaultstream:ci .
