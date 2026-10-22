@@ -5,9 +5,11 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:?Set DB_NAME}
       POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - db_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
@@ -34,10 +36,8 @@ services:
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://vaultstream-db:5432/${DB_NAME:?Set DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:?Set a strong JWT_SECRET}
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
       VAULTSTREAM_ADMIN_USERNAME: ${VAULTSTREAM_ADMIN_USERNAME:?Set VAULTSTREAM_ADMIN_USERNAME}
-      VAULTSTREAM_ADMIN_PASSWORD: ${VAULTSTREAM_ADMIN_PASSWORD:?Set VAULTSTREAM_ADMIN_PASSWORD}
     ports:
       - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8081}:8081"
     read_only: true
@@ -55,9 +55,24 @@ services:
       start_period: 60s
     networks:
       - backend
+    secrets:
+      - source: db_password
+        target: SPRING_DATASOURCE_PASSWORD
+      - source: jwt_secret
+        target: JWT_SECRET
+      - source: admin_password
+        target: VAULTSTREAM_ADMIN_PASSWORD
 
 volumes:
   postgres_data:
+
+secrets:
+  db_password:
+    file: ${DB_PASSWORD_FILE:?Set DB_PASSWORD_FILE}
+  jwt_secret:
+    file: ${JWT_SECRET_FILE:?Set JWT_SECRET_FILE}
+  admin_password:
+    file: ${VAULTSTREAM_ADMIN_PASSWORD_FILE:?Set VAULTSTREAM_ADMIN_PASSWORD_FILE}
 
 networks:
   backend:

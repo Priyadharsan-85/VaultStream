@@ -96,21 +96,31 @@ docker-compose up --build
 
 The production stack is separate from the local development stack. It runs the app with the `prod` profile, requires credentials and a JWT signing secret, persists PostgreSQL data in a named volume, and binds the app to localhost by default. Put a host-based HTTPS reverse proxy in front of it before exposing the service publicly.
 
-Create a `.env` file (keep it out of version control) with:
+Create secret files outside version control, then create a `.env` file:
 
 ```dotenv
 DB_NAME=vaultstream
 DB_USERNAME=vaultstream_user
-DB_PASSWORD=replace-with-a-long-random-database-password
-JWT_SECRET=replace-with-at-least-64-random-bytes
 VAULTSTREAM_ADMIN_USERNAME=admin
-VAULTSTREAM_ADMIN_PASSWORD=replace-with-a-unique-password-of-12-to-72-characters
+DB_PASSWORD_FILE=./secrets/db_password
+JWT_SECRET_FILE=./secrets/jwt_secret
+VAULTSTREAM_ADMIN_PASSWORD_FILE=./secrets/admin_password
 # Optional: change the local bind address/port when configuring a reverse proxy.
 APP_BIND_ADDRESS=127.0.0.1
 APP_PORT=8081
 ```
 
-Generate a signing secret with `openssl rand -base64 64`, then start the stack:
+Create the files with unique values (the admin password must be 12-72 characters):
+
+```bash
+mkdir -p secrets
+python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(48))" > secrets/db_password
+python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(64))" > secrets/jwt_secret
+python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(32))" > secrets/admin_password
+chmod 600 secrets/*
+```
+
+The secret files are mounted read-only into the containers and loaded by Spring's config tree support. Keep `.env` and the `secrets/` directory out of source control and protect them on the deployment host. Then start the stack:
 
 ```bash
 docker compose --env-file .env -f docker-compose.prod.yml up -d --build
@@ -140,7 +150,7 @@ Schedule this command with your host's scheduler, encrypt and copy the resulting
 | `JWT_SECRET` | Secret key for JWT signing | Local-development fallback; set a secret in deployments |
 | `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
 | `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
-Production deployments must set `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `VAULTSTREAM_ADMIN_USERNAME`, and `VAULTSTREAM_ADMIN_PASSWORD` in the environment or `.env` file. Do not use the local development defaults in a deployed environment.
+Production deployments must set `DB_NAME`, `DB_USERNAME`, `VAULTSTREAM_ADMIN_USERNAME`, and the three secret file paths in the `.env` file. Do not use the local development defaults in a deployed environment.
 
 ## API Endpoints
 

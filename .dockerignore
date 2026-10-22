@@ -6,5 +6,6 @@ target
 logs
 .env
 .env.*
+secrets
 !.env.example
 *.log
