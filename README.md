@@ -118,6 +118,16 @@ docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 
 The app starts only after PostgreSQL reports healthy. Flyway applies schema migrations on startup. PostgreSQL is not published to the host, and the app container runs as a non-root user with a read-only filesystem. Back up the PostgreSQL volume using a tested database backup and restore process before handling real data.
 
+#### Database backups
+
+Create a consistent custom-format database dump with:
+
+```bash
+bash scripts/backup-postgres.sh /path/to/secure/backup-storage
+```
+
+Schedule this command with your host's scheduler, encrypt and copy the resulting dump to storage outside the application host, and apply a retention policy. Before going live, restore a backup into a separate PostgreSQL instance and verify the application can read the restored data. The script writes a local dump; it does not schedule itself or upload backups.
+
 ### Environment Variables
 
 | Variable | Description | Default |
