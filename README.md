@@ -144,9 +144,11 @@ Example transaction history request: `GET /api/transactions/account/{accountId}?
 
 ### Monitoring & Health
 
-- `GET /actuator/health` - Application health status
-- `GET /actuator/metrics` - Application metrics
-- `GET /actuator/info` - Application information
+- `GET /actuator/health` - Public application health status (details require an admin token)
+- `GET /actuator/metrics` - Application metrics (admin token required)
+- `GET /actuator/info` - Application information (admin token required)
+
+The Prometheus and log-file actuator endpoints also require an administrator JWT.
 
 ## API Documentation
 
@@ -179,7 +181,7 @@ Content-Type: application/json
 
 ## Security
 
-All API endpoints (except `/api/auth/**` and actuator endpoints) require JWT authentication:
+Login, registration, API documentation, and basic health status are public. Logout and all other API endpoints require JWT authentication; actuator endpoints other than basic health require an administrator JWT:
 
 1. Obtain a token by calling `/api/auth/login` with username and password
 2. Include the token in the Authorization header: `Bearer <token>`

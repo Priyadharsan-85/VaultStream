@@ -60,7 +60,8 @@ management:
         include: health,info,metrics,prometheus,logfile
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
+      roles: ADMIN
     prometheus:
       enabled: true
   metrics:
