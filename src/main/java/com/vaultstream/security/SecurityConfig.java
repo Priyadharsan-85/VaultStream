@@ -43,7 +43,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf().disable()
+            // API authentication uses an explicit Bearer header, never an automatically sent cookie.
+            // Keep CSRF protection enabled for any browser-facing routes outside the stateless API.
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
             .exceptionHandling(exceptionHandling -> exceptionHandling
                 .authenticationEntryPoint(authenticationEntryPoint)
                 .accessDeniedHandler(accessDeniedHandler))
