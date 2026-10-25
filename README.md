@@ -130,7 +130,7 @@ python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(32))" > s
 chmod 600 secrets/*
 ```
 
-The PostgreSQL bootstrap role is a superuser used only by the database container during initialization. The app uses a separate runtime role for normal queries and a non-superuser migration role for Flyway. The migration role owns the application database; the runtime role receives data access to current and future tables and sequences. The application container does not receive the bootstrap credential.
+The PostgreSQL bootstrap role is a superuser used only by the database container during initialization. The app uses a separate runtime role for normal queries and a non-superuser migration role for Flyway. The migration role owns the application database; the runtime role receives data access to current and future tables and sequences. The application container does not receive the bootstrap credential, but it does receive the migration credential because Flyway currently runs during application startup. For a high-sensitivity deployment, move migrations into a separate one-shot job before launch so the long-running app never receives database-owner access.
 
 The initialization script creates these roles only when PostgreSQL initializes a new, empty data volume. Do not point this Compose setup at an existing database volume without first applying and reviewing an equivalent role/grant migration and confirming a recoverable backup. Secret files are mounted read-only into the containers and loaded by Spring's config tree support. Keep `.env` and the `secrets/` directory out of source control and protect them on the deployment host. Then start the stack:
 
