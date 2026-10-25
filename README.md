@@ -60,6 +60,8 @@ vaultstream/
 
 ## Getting Started
 
+For the current launch decision and the remaining production gates, see the [production readiness checklist](PRODUCTION_READINESS.md).
+
 ### Prerequisites
 
 - Java 17 JDK
