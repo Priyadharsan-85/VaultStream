@@ -171,8 +171,8 @@ Set both administrator environment variables to provision the first admin user. 
 - `POST /api/accounts` - Create new account
 - `PUT /api/accounts/{id}` - Update account
 - `DELETE /api/accounts/{id}` - Delete account
-- `POST /api/accounts/{id}/deposit` - Deposit funds
-- `POST /api/accounts/{id}/withdraw` - Withdraw funds
+- `POST /api/accounts/{id}/deposit` - Admin-only manual deposit entry
+- `POST /api/accounts/{id}/withdraw` - Admin-only manual withdrawal entry
 
 Account and transaction history endpoints accept `page` (zero-based, default `0`) and `size` (default `20`, maximum `100`) query parameters. Results include page metadata such as `totalElements` and `totalPages`.
 
@@ -182,8 +182,8 @@ Account and transaction history endpoints accept `page` (zero-based, default `0`
 - `GET /api/transactions/reference/{referenceId}` - Get transaction by reference ID
 - `GET /api/transactions/account/{accountId}` - Get a page of transactions for an account
 - `GET /api/transactions/account/{accountId}/range` - Get a page of transactions in a time range
-- `POST /api/transactions/deposit` - Create deposit transaction
-- `POST /api/transactions/withdraw` - Create withdrawal transaction
+- `POST /api/transactions/deposit` - Admin-only manual deposit transaction
+- `POST /api/transactions/withdraw` - Admin-only manual withdrawal transaction
 - `POST /api/transactions/transfer` - Create transfer transaction
 
 Example transaction history request: `GET /api/transactions/account/{accountId}?page=0&size=20`
@@ -227,7 +227,7 @@ Content-Type: application/json
 
 ## Security
 
-Login, registration, API documentation, basic health status, and the Prometheus scrape endpoint are public. Logout and all other API endpoints require JWT authentication; actuator endpoints other than basic health and Prometheus require an administrator JWT:
+Login, registration, API documentation, and basic health status are public. Logout and other API endpoints require JWT authentication. Manual deposits and withdrawals and all actuator endpoints other than basic health require an administrator JWT. Deposits and withdrawals are administrative ledger adjustments; connect a verified payment or settlement provider before using them to represent real money movement:
 
 1. Obtain a token by calling `/api/auth/login` with username and password
 2. Include the token in the Authorization header: `Bearer <token>`

@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -71,6 +72,7 @@ public class AccountController {
     }
 
     @PostMapping("/{id}/deposit")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AccountDto> deposit(@PathVariable UUID id,
                                               @Valid @RequestBody AccountDto.DepositRequest request,
                                               Principal principal) {
@@ -80,6 +82,7 @@ public class AccountController {
     }
 
     @PostMapping("/{id}/withdraw")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AccountDto> withdraw(@PathVariable UUID id,
                                                @Valid @RequestBody AccountDto.WithdrawRequest request,
                                                Principal principal) {

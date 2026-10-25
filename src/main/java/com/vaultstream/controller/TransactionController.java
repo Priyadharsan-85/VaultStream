@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -68,6 +69,7 @@ public class TransactionController {
     }
 
     @PostMapping("/deposit")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TransactionDto> deposit(@Valid @RequestBody TransactionDto.DepositRequest request, Principal principal) {
         TransactionDto transactionDto = transactionService.deposit(
                 request.getAccountId(),
@@ -79,6 +81,7 @@ public class TransactionController {
     }
 
     @PostMapping("/withdraw")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TransactionDto> withdraw(@Valid @RequestBody TransactionDto.WithdrawRequest request, Principal principal) {
         TransactionDto transactionDto = transactionService.withdraw(
                 request.getAccountId(),
