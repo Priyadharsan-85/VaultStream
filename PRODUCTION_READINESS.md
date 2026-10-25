@@ -12,6 +12,7 @@ Use this checklist to track the remaining work. Mark an item complete only after
 - [x] Spring production profile disables schema auto-update and uses Flyway migrations.
 - [x] Public registration defaults to disabled in production; manual balance adjustments are administrator-only.
 - [x] WebSocket browser origins are explicitly configured, and Actuator endpoints other than basic health require an administrator.
+- [x] OpenAPI and Swagger UI endpoints are disabled in the production profile.
 - [x] CI builds and verifies the Java project, scans the container image, runs CodeQL, and reviews dependency changes on pull requests.
 - [x] Backup script encrypts database dumps with age before writing them to the selected destination.
 

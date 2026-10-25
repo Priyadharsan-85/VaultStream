@@ -205,6 +205,8 @@ Once the application is running, you can access the interactive API documentatio
 - Swagger UI: `http://localhost:8080/api/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/api/v3/api-docs`
 
+These endpoints are for local/development use and are disabled in the production profile.
+
 ## Idempotency
 
 VaultStream supports idempotency keys to prevent duplicate processing of requests. To use idempotency:
