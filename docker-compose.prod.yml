@@ -4,11 +4,16 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:?Set DB_NAME}
-      POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME}
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_USER: ${DB_BOOTSTRAP_USERNAME:?Set DB_BOOTSTRAP_USERNAME}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_bootstrap_password
+      DB_MIGRATION_USERNAME: ${DB_MIGRATION_USERNAME:?Set DB_MIGRATION_USERNAME}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init-roles.sh:/docker-entrypoint-initdb.d/10-create-app-roles.sh:ro
     secrets:
+      - db_bootstrap_password
+      - db_migration_password
       - db_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -36,6 +41,7 @@ services:
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://vaultstream-db:5432/${DB_NAME:?Set DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      SPRING_FLYWAY_USER: ${DB_MIGRATION_USERNAME:?Set DB_MIGRATION_USERNAME}
       SPRING_CONFIG_IMPORT: configtree:/run/secrets/
       VAULTSTREAM_ADMIN_USERNAME: ${VAULTSTREAM_ADMIN_USERNAME:?Set VAULTSTREAM_ADMIN_USERNAME}
       VAULTSTREAM_ALLOWED_ORIGINS: ${VAULTSTREAM_ALLOWED_ORIGINS:?Set VAULTSTREAM_ALLOWED_ORIGINS}
@@ -60,6 +66,8 @@ services:
     secrets:
       - source: db_password
         target: SPRING_DATASOURCE_PASSWORD
+      - source: db_migration_password
+        target: SPRING_FLYWAY_PASSWORD
       - source: jwt_secret
         target: JWT_SECRET
       - source: admin_password
@@ -69,6 +77,10 @@ volumes:
   postgres_data:
 
 secrets:
+  db_bootstrap_password:
+    file: ${DB_BOOTSTRAP_PASSWORD_FILE:?Set DB_BOOTSTRAP_PASSWORD_FILE}
+  db_migration_password:
+    file: ${DB_MIGRATION_PASSWORD_FILE:?Set DB_MIGRATION_PASSWORD_FILE}
   db_password:
     file: ${DB_PASSWORD_FILE:?Set DB_PASSWORD_FILE}
   jwt_secret:

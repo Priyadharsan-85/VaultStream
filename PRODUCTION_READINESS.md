@@ -10,6 +10,7 @@ Use this checklist to track the remaining work. Mark an item complete only after
 
 - [x] Production Compose profile separates the database network, mounts credentials as container secrets, and runs the app as a non-root user with a read-only filesystem.
 - [x] Spring production profile disables schema auto-update and uses Flyway migrations.
+- [x] Production Compose uses separate PostgreSQL bootstrap, migration, and runtime roles; only the database container receives the bootstrap superuser credential.
 - [x] Public registration defaults to disabled in production; manual balance adjustments are administrator-only.
 - [x] WebSocket browser origins are explicitly configured, and Actuator endpoints other than basic health require an administrator.
 - [x] OpenAPI and Swagger UI endpoints are disabled in the production profile.
@@ -31,6 +32,7 @@ These checks confirm repository configuration only. They do not confirm the host
 ### Secrets and administrator access
 
 - [ ] Create unique production database, JWT, and administrator credentials in the provider's secret manager or protected host files.
+- [ ] For an already initialized database volume, apply and review the runtime/migration role grants before upgrading; the Compose initialization script only runs on a new empty volume.
 - [ ] Ensure `.env`, secret files, database dumps, and JWT signing material are excluded from source control and ordinary logs.
 - [ ] Establish and rehearse administrator credential rotation and JWT signing-key rotation. Restrict who can read or change production secrets.
 - [ ] Confirm the production browser origin list contains only the deployed client origins.

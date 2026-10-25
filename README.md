@@ -98,14 +98,18 @@ docker-compose up --build
 
 The production stack is separate from the local development stack. It runs the app with the `prod` profile, requires credentials and mounted secret files, persists PostgreSQL data in a named volume, and binds the app to localhost by default. Put a host-based HTTPS reverse proxy in front of it before exposing the service publicly.
 
-Create secret files outside version control, then create a `.env` file:
+Create secret files outside version control, then create a `.env` file. The bootstrap, migration, and runtime database roles must use different usernames and passwords:
 
 ```dotenv
 DB_NAME=vaultstream
-DB_USERNAME=vaultstream_user
+DB_BOOTSTRAP_USERNAME=vaultstream_bootstrap
+DB_MIGRATION_USERNAME=vaultstream_migrator
+DB_USERNAME=vaultstream_app
 VAULTSTREAM_ADMIN_USERNAME=admin
 VAULTSTREAM_ALLOWED_ORIGINS=https://app.example.com
 VAULTSTREAM_REGISTRATION_ENABLED=false
+DB_BOOTSTRAP_PASSWORD_FILE=./secrets/db_bootstrap_password
+DB_MIGRATION_PASSWORD_FILE=./secrets/db_migration_password
 DB_PASSWORD_FILE=./secrets/db_password
 JWT_SECRET_FILE=./secrets/jwt_secret
 VAULTSTREAM_ADMIN_PASSWORD_FILE=./secrets/admin_password
@@ -119,12 +123,16 @@ Create the files with unique values (the admin password must be 12-72 characters
 ```bash
 mkdir -p secrets
 python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(48))" > secrets/db_password
+python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(48))" > secrets/db_bootstrap_password
+python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(48))" > secrets/db_migration_password
 python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(64))" > secrets/jwt_secret
 python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(32))" > secrets/admin_password
 chmod 600 secrets/*
 ```
 
-The secret files are mounted read-only into the containers and loaded by Spring's config tree support. Keep `.env` and the `secrets/` directory out of source control and protect them on the deployment host. Then start the stack:
+The PostgreSQL bootstrap role is a superuser used only by the database container during initialization. The app uses a separate runtime role for normal queries and a non-superuser migration role for Flyway. The migration role owns the application database; the runtime role receives data access to current and future tables and sequences. The application container does not receive the bootstrap credential.
+
+The initialization script creates these roles only when PostgreSQL initializes a new, empty data volume. Do not point this Compose setup at an existing database volume without first applying and reviewing an equivalent role/grant migration and confirming a recoverable backup. Secret files are mounted read-only into the containers and loaded by Spring's config tree support. Keep `.env` and the `secrets/` directory out of source control and protect them on the deployment host. Then start the stack:
 
 ```bash
 docker compose --env-file .env -f docker-compose.prod.yml up -d --build
@@ -149,12 +157,14 @@ The script writes encrypted `.dump.age` files and removes incomplete output if t
 | `DB_HOST` | Database host | `vaultstream-db` |
 | `DB_PORT` | Database port | `5432` |
 | `DB_NAME` | Database name | `vaultstream` |
-| `DB_USERNAME` | Database username | `vaultstream_user` |
+| `DB_BOOTSTRAP_USERNAME` | PostgreSQL initialization superuser (database container only) | Required |
+| `DB_MIGRATION_USERNAME` | Non-superuser role used by Flyway | Required |
+| `DB_USERNAME` | Runtime application database role | Required |
 | `DB_PASSWORD` | Database password | `vaultstream_pass` |
 | `JWT_SECRET` | Secret key for JWT signing | Local-development fallback; set a secret in deployments |
 | `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
 | `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
-Production deployments must set `DB_NAME`, `DB_USERNAME`, `VAULTSTREAM_ADMIN_USERNAME`, `VAULTSTREAM_ALLOWED_ORIGINS`, and the three secret file paths in the `.env` file. Set `VAULTSTREAM_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of trusted browser clients, comma-separated when there are multiple. Self-registration is disabled by default in the production profile; enable it only after an identity-verification and customer-onboarding process is in place. Account requests still require administrator approval. Do not use a wildcard or the local development defaults in a deployed environment.
+Production deployments must set all three database usernames, `DB_NAME`, `VAULTSTREAM_ADMIN_USERNAME`, `VAULTSTREAM_ALLOWED_ORIGINS`, and the five secret file paths shown above in the `.env` file. Set `VAULTSTREAM_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of trusted browser clients, comma-separated when there are multiple. Self-registration is disabled by default in the production profile; enable it only after an identity-verification and customer-onboarding process is in place. Account requests still require administrator approval. Do not use a wildcard or the local development defaults in a deployed environment.
 
 ## API Endpoints
 
