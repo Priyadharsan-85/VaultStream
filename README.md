@@ -132,13 +132,13 @@ The app starts only after PostgreSQL reports healthy. Flyway applies schema migr
 
 #### Database backups
 
-Create a consistent custom-format database dump with:
+Install the `age` encryption utility on the host and create an age key pair. Keep the private identity outside the application host and outside source control. Then create a consistent, encrypted custom-format database dump:
 
 ```bash
-bash scripts/backup-postgres.sh /path/to/secure/backup-storage
+VAULTSTREAM_BACKUP_AGE_RECIPIENT=age1... bash scripts/backup-postgres.sh /path/to/secure/backup-storage
 ```
 
-Schedule this command with your host's scheduler, encrypt and copy the resulting dump to storage outside the application host, and apply a retention policy. Before going live, restore a backup into a separate PostgreSQL instance and verify the application can read the restored data. The script writes a local dump; it does not schedule itself or upload backups.
+The script writes encrypted `.dump.age` files and removes incomplete output if the dump or encryption step fails. Configure your host scheduler to run it, copy completed files to access-controlled storage outside the application host, and enforce a retention policy there. The script does not schedule itself or upload backups. Before go-live, decrypt and restore a backup into a separate PostgreSQL instance and verify the application can read the restored data; record the restore result and recovery time.
 
 ### Environment Variables
 
