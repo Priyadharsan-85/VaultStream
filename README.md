@@ -194,7 +194,7 @@ Example transaction history request: `GET /api/transactions/account/{accountId}?
 - `GET /actuator/metrics` - Application metrics (admin token required)
 - `GET /actuator/info` - Application information (admin token required)
 
-The Prometheus scrape endpoint remains available to the configured scraper. Keep it behind a trusted network or reverse proxy when deploying publicly. The log-file endpoint requires an administrator JWT.
+The Prometheus scrape endpoint requires an administrator JWT. Configure the scraper to send `Authorization: Bearer <token>` and keep the endpoint behind a trusted network or reverse proxy when deploying publicly. The log-file endpoint also requires an administrator JWT.
 
 ## API Documentation
 
