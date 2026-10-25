@@ -29,6 +29,7 @@ vaultstream:
   security:
     jwt-secret: ${JWT_SECRET}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:3600000}  # 1 hour
+    allowed-origins: ${VAULTSTREAM_ALLOWED_ORIGINS}
   monitoring:
     metrics:
       enabled: true

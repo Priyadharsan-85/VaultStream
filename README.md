@@ -102,6 +102,7 @@ Create secret files outside version control, then create a `.env` file:
 DB_NAME=vaultstream
 DB_USERNAME=vaultstream_user
 VAULTSTREAM_ADMIN_USERNAME=admin
+VAULTSTREAM_ALLOWED_ORIGINS=https://app.example.com
 DB_PASSWORD_FILE=./secrets/db_password
 JWT_SECRET_FILE=./secrets/jwt_secret
 VAULTSTREAM_ADMIN_PASSWORD_FILE=./secrets/admin_password
@@ -150,7 +151,7 @@ Schedule this command with your host's scheduler, encrypt and copy the resulting
 | `JWT_SECRET` | Secret key for JWT signing | Local-development fallback; set a secret in deployments |
 | `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
 | `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
-Production deployments must set `DB_NAME`, `DB_USERNAME`, `VAULTSTREAM_ADMIN_USERNAME`, and the three secret file paths in the `.env` file. Do not use the local development defaults in a deployed environment.
+Production deployments must set `DB_NAME`, `DB_USERNAME`, `VAULTSTREAM_ADMIN_USERNAME`, `VAULTSTREAM_ALLOWED_ORIGINS`, and the three secret file paths in the `.env` file. Set `VAULTSTREAM_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of trusted browser clients, comma-separated when there are multiple. Do not use a wildcard or the local development defaults in a deployed environment.
 
 ## API Endpoints
 
