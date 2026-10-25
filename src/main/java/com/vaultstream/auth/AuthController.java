@@ -6,6 +6,7 @@ import com.vaultstream.security.TokenRevocationService;
 import com.vaultstream.repository.AppUserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,8 +29,15 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final TokenRevocationService tokenRevocationService;
 
+    @Value("${vaultstream.security.registration-enabled:true}")
+    private boolean registrationEnabled = true;
+
     @PostMapping("/register")
     public ResponseEntity<AuthDto.LoginResponse> register(@Valid @RequestBody AuthDto.RegisterRequest request) {
+        if (!registrationEnabled) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration is disabled");
+        }
+
         if (appUserRepository.existsByUsername(request.getUsername())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already registered");
         }

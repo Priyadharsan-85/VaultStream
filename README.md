@@ -103,6 +103,7 @@ DB_NAME=vaultstream
 DB_USERNAME=vaultstream_user
 VAULTSTREAM_ADMIN_USERNAME=admin
 VAULTSTREAM_ALLOWED_ORIGINS=https://app.example.com
+VAULTSTREAM_REGISTRATION_ENABLED=false
 DB_PASSWORD_FILE=./secrets/db_password
 JWT_SECRET_FILE=./secrets/jwt_secret
 VAULTSTREAM_ADMIN_PASSWORD_FILE=./secrets/admin_password
@@ -151,14 +152,14 @@ Schedule this command with your host's scheduler, encrypt and copy the resulting
 | `JWT_SECRET` | Secret key for JWT signing | Local-development fallback; set a secret in deployments |
 | `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
 | `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
-Production deployments must set `DB_NAME`, `DB_USERNAME`, `VAULTSTREAM_ADMIN_USERNAME`, `VAULTSTREAM_ALLOWED_ORIGINS`, and the three secret file paths in the `.env` file. Set `VAULTSTREAM_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of trusted browser clients, comma-separated when there are multiple. Do not use a wildcard or the local development defaults in a deployed environment.
+Production deployments must set `DB_NAME`, `DB_USERNAME`, `VAULTSTREAM_ADMIN_USERNAME`, `VAULTSTREAM_ALLOWED_ORIGINS`, and the three secret file paths in the `.env` file. Set `VAULTSTREAM_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of trusted browser clients, comma-separated when there are multiple. Self-registration is disabled by default in the production profile; enable it only after an identity-verification and customer-onboarding process is in place. Account requests still require administrator approval. Do not use a wildcard or the local development defaults in a deployed environment.
 
 ## API Endpoints
 
 ### Authentication
 
 - `POST /api/auth/login` - Authenticate user and receive JWT token
-- `POST /api/auth/register` - Register with a username and password, then receive a JWT token
+- `POST /api/auth/register` - Register with a username and password, then receive a JWT token (disabled by default in production)
 - `POST /api/auth/logout` - Revoke the current bearer token
 
 Set both administrator environment variables to provision the first admin user. Admins can approve or suspend accounts with `PUT /api/admin/accounts/{id}/status`.
@@ -227,7 +228,7 @@ Content-Type: application/json
 
 ## Security
 
-Login, registration, API documentation, and basic health status are public. Logout and other API endpoints require JWT authentication. Manual deposits and withdrawals and all actuator endpoints other than basic health require an administrator JWT. Deposits and withdrawals are administrative ledger adjustments; connect a verified payment or settlement provider before using them to represent real money movement:
+Login, API documentation, and basic health status are public. Registration is public only when enabled. Logout and other API endpoints require JWT authentication. Manual deposits and withdrawals and all actuator endpoints other than basic health require an administrator JWT. Deposits and withdrawals are administrative ledger adjustments; connect a verified payment or settlement provider before using them to represent real money movement:
 
 1. Obtain a token by calling `/api/auth/login` with username and password
 2. Include the token in the Authorization header: `Bearer <token>`
