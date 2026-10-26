@@ -36,6 +36,7 @@ server:
 vaultstream:
   ledger:
     manual-adjustments-enabled: ${VAULTSTREAM_LEDGER_MANUAL_ADJUSTMENTS_ENABLED:false}
+    customer-transfers-enabled: ${VAULTSTREAM_CUSTOMER_TRANSFERS_ENABLED:false}
   security:
     jwt-secret: ${JWT_SECRET}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:3600000}  # 1 hour

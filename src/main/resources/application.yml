@@ -40,6 +40,7 @@ spring:
 vaultstream:
   ledger:
     manual-adjustments-enabled: true
+    customer-transfers-enabled: true
     batch-size: 1000
     flush-interval-ms: 5000
     retry-attempts: 3

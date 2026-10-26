@@ -14,6 +14,7 @@ Use this checklist to track the remaining work. Mark an item complete only after
 - [x] Production Compose runs Flyway in a separate one-shot container and withholds its database-owner credential from the long-running API container.
 - [x] Public registration defaults to disabled in production; manual balance adjustments are administrator-only.
 - [x] Manual deposits and withdrawals are disabled by default in the production profile.
+- [x] Customer-to-customer transfers are disabled by default in the production profile.
 - [x] WebSocket browser origins are explicitly configured, and Actuator endpoints other than basic health require an administrator.
 - [x] OpenAPI and Swagger UI endpoints are disabled in the production profile.
 - [x] CI builds and verifies the Java project, scans the container image, runs CodeQL, and reviews dependency changes on pull requests.
@@ -62,6 +63,7 @@ These need product, provider, legal, and operational decisions; repository confi
 
 - [ ] Implement verified customer onboarding, account approval, secure recovery, and any required multi-factor authentication. Registration is currently disabled by default and there is no complete customer provisioning flow.
 - [ ] Integrate a selected payment/settlement provider. Verify webhook signatures, enforce replay protection and idempotency, reconcile provider settlement reports, and define refund, reversal, dispute, and failure handling.
+- [ ] For the planned India wallet model, obtain written legal/compliance classification of customer stored balances, transfers, and withdrawals against the [RBI PPI Master Directions](https://www.rbi.org.in/Scripts/NotificationUser.aspx/NotificationUser.aspx?Id=12156) and [payment-system rules](https://www.rbi.org.in/CommonPerson/english/scripts/FAQs.aspx?Id=420). Confirm whether VaultStream needs authorization or must operate through an authorized bank/PPI issuer before enabling customer funds.
 - [ ] Remove manual deposits and withdrawals from customer-facing operational flows. Preserve tightly controlled adjustments with reason codes, immutable audit records, and dual approval.
 - [ ] Have qualified accounting and security reviewers validate ledger semantics, reconciliation, concurrency behavior, data retention, and auditability against the intended product and jurisdiction.
 - [ ] Establish applicable legal, licensing, privacy, consumer-protection, and financial-crime obligations with qualified counsel and compliance specialists before accepting funds.

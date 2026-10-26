@@ -44,6 +44,9 @@ public class TransactionService {
     @Value("${vaultstream.ledger.manual-adjustments-enabled:true}")
     private boolean manualAdjustmentsEnabled = true;
 
+    @Value("${vaultstream.ledger.customer-transfers-enabled:true}")
+    private boolean customerTransfersEnabled = true;
+
     private static final UUID CLEARING_ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Transactional(readOnly = true)
@@ -162,6 +165,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto transfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String referenceId,
                                    String description, String ownerUsername) {
+        requireCustomerTransfersEnabled();
         // Validate accounts
         if (fromAccountId.equals(toAccountId)) {
             throw new IllegalArgumentException("Source and destination accounts must be different");
@@ -242,6 +246,13 @@ public class TransactionService {
         if (!manualAdjustmentsEnabled) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Manual ledger adjustments are disabled");
+        }
+    }
+
+    private void requireCustomerTransfersEnabled() {
+        if (!customerTransfersEnabled) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Customer account transfers are disabled");
         }
     }
 

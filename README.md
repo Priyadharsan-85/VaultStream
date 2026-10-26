@@ -165,6 +165,7 @@ The script writes encrypted `.dump.age` files and removes incomplete output if t
 | `VAULTSTREAM_ADMIN_USERNAME` | Optional username for the first administrator | - |
 | `VAULTSTREAM_ADMIN_PASSWORD` | Optional administrator password (12-72 characters) | - |
 | `VAULTSTREAM_LEDGER_MANUAL_ADJUSTMENTS_ENABLED` | Allow administrator-initiated manual deposits and withdrawals | `false` in production |
+| `VAULTSTREAM_CUSTOMER_TRANSFERS_ENABLED` | Allow customer-initiated transfers between VaultStream accounts | `false` in production |
 Production deployments must set all three database usernames, `DB_NAME`, `VAULTSTREAM_ADMIN_USERNAME`, `VAULTSTREAM_ALLOWED_ORIGINS`, and the five secret file paths shown above in the `.env` file. Set `VAULTSTREAM_ALLOWED_ORIGINS` to the exact HTTPS origin(s) of trusted browser clients, comma-separated when there are multiple. Self-registration and manual deposits/withdrawals are disabled by default in the production profile. Enable either only after the required verified onboarding or provider-backed settlement controls are in place. Account requests still require administrator approval. Do not use a wildcard or the local development defaults in a deployed environment.
 
 ## API Endpoints
@@ -198,7 +199,7 @@ Account and transaction history endpoints accept `page` (zero-based, default `0`
 - `GET /api/transactions/account/{accountId}/range` - Get a page of transactions in a time range
 - `POST /api/transactions/deposit` - Admin-only manual deposit transaction (disabled by default in production)
 - `POST /api/transactions/withdraw` - Admin-only manual withdrawal transaction (disabled by default in production)
-- `POST /api/transactions/transfer` - Create transfer transaction
+- `POST /api/transactions/transfer` - Create transfer transaction (disabled by default in production)
 
 Example transaction history request: `GET /api/transactions/account/{accountId}?page=0&size=20`
 
@@ -243,7 +244,7 @@ Content-Type: application/json
 
 ## Security
 
-Login, API documentation, and basic health status are public. Registration is public only when enabled. Logout and other API endpoints require JWT authentication. Manual deposits and withdrawals and all actuator endpoints other than basic health require an administrator JWT; manual balance adjustments are also disabled by default in production. They are not a substitute for provider-backed payment and settlement processing:
+Login, API documentation, and basic health status are public. Registration is public only when enabled. Logout and other API endpoints require JWT authentication. Manual deposits and withdrawals and all actuator endpoints other than basic health require an administrator JWT; manual balance adjustments and customer transfers are disabled by default in production. These ledger operations do not establish regulated custody, payment processing, or settlement:
 
 1. Obtain a token by calling `/api/auth/login` with username and password
 2. Include the token in the Authorization header: `Bearer <token>`
