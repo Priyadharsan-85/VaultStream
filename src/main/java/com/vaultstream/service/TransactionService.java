@@ -15,10 +15,13 @@ import com.vaultstream.repository.LedgerJournalRepository;
 import com.vaultstream.repository.TransactionRepository;
 import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,6 +40,9 @@ public class TransactionService {
     private final TransactionMapper transactionMapper;
     private final TransactionMetrics transactionMetrics;
     private final WebSocketService webSocketService;
+
+    @Value("${vaultstream.ledger.manual-adjustments-enabled:true}")
+    private boolean manualAdjustmentsEnabled = true;
 
     private static final UUID CLEARING_ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -78,6 +84,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto deposit(UUID accountId, BigDecimal amount, String referenceId, String description,
                                   String ownerUsername) {
+        requireManualAdjustmentsEnabled();
         Account account = findOwnedAccountForUpdate(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -114,6 +121,7 @@ public class TransactionService {
     @Transactional
     public TransactionDto withdraw(UUID accountId, BigDecimal amount, String referenceId, String description,
                                    String ownerUsername) {
+        requireManualAdjustmentsEnabled();
         Account account = findOwnedAccountForUpdate(accountId, ownerUsername);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -228,6 +236,13 @@ public class TransactionService {
     private Account findOwnedAccountForUpdate(UUID accountId, String ownerUsername) {
         return accountRepository.findOwnedByIdForUpdate(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+    }
+
+    private void requireManualAdjustmentsEnabled() {
+        if (!manualAdjustmentsEnabled) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Manual ledger adjustments are disabled");
+        }
     }
 
     private void requireAccountOwnership(UUID accountId, String ownerUsername) {
