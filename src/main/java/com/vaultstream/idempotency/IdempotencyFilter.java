@@ -49,7 +49,7 @@ public class IdempotencyFilter implements Filter {
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-        if (!isWriteMethod(httpRequest.getMethod())) {
+        if (!isIdempotentOperation(httpRequest)) {
             chain.doFilter(request, response);
             return;
         }
@@ -110,10 +110,19 @@ public class IdempotencyFilter implements Filter {
         }
     }
 
-    private boolean isWriteMethod(String method) {
-        return "POST".equalsIgnoreCase(method)
-                || "PUT".equalsIgnoreCase(method)
-                || "PATCH".equalsIgnoreCase(method);
+    private boolean isIdempotentOperation(HttpServletRequest request) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+
+        String path = request.getRequestURI();
+        if ("/api/transactions/deposit".equals(path)
+                || "/api/transactions/withdraw".equals(path)
+                || "/api/transactions/transfer".equals(path)) {
+            return true;
+        }
+
+        return path.matches("/api/accounts/[0-9a-fA-F-]{36}/(deposit|withdraw)");
     }
 
     private String scopedKey(String key) {

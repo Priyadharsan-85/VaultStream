@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class IdempotencyFilterTest {
 
-    private static final String PATH = "/api/accounts";
+    private static final String PATH = "/api/transactions/transfer";
     private static final String KEY = "request-key-123";
 
     @Mock
@@ -73,6 +73,32 @@ class IdempotencyFilterTest {
         filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(204));
 
         assertEquals(204, response.getStatus());
+        verifyNoInteractions(idempotencyService);
+    }
+
+    @Test
+    void passesThroughAuthenticationResponsesWithoutCachingBearerTokens() throws Exception {
+        request.setRequestURI("/api/auth/register");
+
+        filter.doFilter(request, response, (req, res) -> {
+            HttpServletResponse wrapped = (HttpServletResponse) res;
+            wrapped.setStatus(201);
+            wrapped.setContentType("application/json");
+            wrapped.getWriter().write("{\"token\":\"sensitive-bearer-token\"}");
+        });
+
+        assertEquals(201, response.getStatus());
+        assertEquals("{\"token\":\"sensitive-bearer-token\"}", response.getContentAsString());
+        verifyNoInteractions(idempotencyService);
+    }
+
+    @Test
+    void passesThroughUnrelatedWriteRequestsWithoutCachingTheirResponses() throws Exception {
+        request.setRequestURI("/api/accounts");
+
+        filter.doFilter(request, response, (req, res) -> ((HttpServletResponse) res).setStatus(201));
+
+        assertEquals(201, response.getStatus());
         verifyNoInteractions(idempotencyService);
     }
 
