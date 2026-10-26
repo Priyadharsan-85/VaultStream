@@ -15,6 +15,7 @@ Use this checklist to track the remaining work. Mark an item complete only after
 - [x] Public registration defaults to disabled in production; manual balance adjustments are administrator-only.
 - [x] Manual deposits and withdrawals are disabled by default in the production profile.
 - [x] Customer-to-customer transfers are disabled by default in the production profile.
+- [x] Production startup fails if registration, manual adjustments, or customer transfers are enabled through an environment override; the isolated migration job is excluded from this guard.
 - [x] WebSocket browser origins are explicitly configured, and Actuator endpoints other than basic health require an administrator.
 - [x] OpenAPI and Swagger UI endpoints are disabled in the production profile.
 - [x] CI builds and verifies the Java project, scans the container image, runs CodeQL, and reviews dependency changes on pull requests.
