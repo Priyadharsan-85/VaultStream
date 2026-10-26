@@ -1,6 +1,163 @@
-# VaultStream - Real-Time Event-Driven Ledger System
+<div align="center">
 
-VaultStream is a microservices-based banking backend implementing double-entry accounting with ACID-compliant transactions, ensuring zero financial discrepancy under high-concurrency fund transfers.
+# VaultStream
+
+### A secure, observable ledger API for learning and development
+
+[![CI](https://github.com/Priyadharsan-85/VaultStream/actions/workflows/ci.yml/badge.svg)](https://github.com/Priyadharsan-85/VaultStream/actions/workflows/ci.yml)
+![Java 17](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Demo only](https://img.shields.io/badge/status-educational_demo-blue)
+![Backend only](https://img.shields.io/badge/UI-backend_only-lightgrey)
+
+**VaultStream is an educational backend project. It is not a bank or a payment product.**
+
+[Quick start](#run-locally) · [Architecture](#architecture) · [API docs](#api-documentation) · [Production status](#production-and-customer-funds)
+
+</div>
+
+---
+
+## At a glance
+
+| | |
+|---|---|
+| **What it is** | A Spring Boot REST API demonstrating ledger, authentication, and operational patterns |
+| **What it is not** | A regulated financial service, hosted wallet, or production-ready way to accept customer funds |
+| **Frontend** | None currently; use the API and its local Swagger page during development |
+| **Local stack** | Java 17 · Spring Boot · PostgreSQL · Docker Compose · Prometheus · Grafana |
+
+> [!WARNING]
+> **Demo and educational use only. Do not use VaultStream to hold, move, or represent real customer funds.** Production configuration disables customer transfers and manual balance adjustments. Real-money operation requires legal and regulatory review, an authorized financial partner, and substantial controls that this project does not provide.
+
+## What VaultStream demonstrates
+
+- A double-entry ledger model and transactional persistence
+- JWT-based API authentication and role-aware access
+- Idempotency support for retry-safe requests
+- Database migrations and separate production database roles
+- Health endpoints, metrics, dashboards, and containerized local development
+- CI checks for builds and security analysis
+
+These are learning and engineering examples; they are not a guarantee of zero discrepancies, high-volume capacity, or financial compliance.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client[API client] --> API[Spring Boot REST API]
+    API --> Auth[JWT security]
+    API --> Services[Application services]
+    Services --> Ledger[Ledger and transaction logic]
+    Services --> Idempotency[Idempotency records]
+    Ledger --> DB[(PostgreSQL)]
+    Idempotency --> DB
+    Migrate[Flyway migration job] --> DB
+    API --> Metrics[Actuator and Micrometer]
+    Metrics --> Prometheus[Prometheus]
+    Prometheus --> Grafana[Grafana dashboards]
+    API -. local development .-> Swagger[Swagger UI]
+```
+
+### Example request lifecycle
+
+```mermaid
+sequenceDiagram
+    actor User as API client
+    participant API as VaultStream API
+    participant Auth as JWT security
+    participant Service as Transaction service
+    participant DB as PostgreSQL
+    User->>API: Submit authenticated request
+    API->>Auth: Validate token and permissions
+    Auth-->>API: Authorized
+    API->>Service: Validate request and idempotency key
+    Service->>DB: Apply transaction in database transaction
+    DB-->>Service: Commit or reject
+    Service-->>API: Result
+    API-->>User: HTTP response
+```
+
+## Does a frontend exist?
+
+**No. This repository currently contains a backend only.** It has no React, Vue, Angular, or other customer-facing web application. Swagger UI is generated API documentation for developers; it is not a customer frontend. A separate frontend can be built later against the REST API, with its own authentication, accessibility, and security review.
+
+## Run locally
+
+Docker Compose is the quickest way to start the development stack. It binds service ports to `127.0.0.1`, so they are reachable from this computer only.
+
+```bash
+docker compose up --build
+```
+
+When the services report healthy, open:
+
+| Service | Local address | Purpose |
+|---|---|---|
+| API | `http://localhost:8082` | Backend API |
+| Swagger UI | `http://localhost:8082/swagger-ui/index.html` | Explore the development API |
+| OpenAPI document | `http://localhost:8082/v3/api-docs` | Machine-readable API description |
+| Prometheus | `http://localhost:9090` | Local metrics collection |
+| Grafana | `http://localhost:3000` | Local dashboards |
+| PostgreSQL | `localhost:5432` | Local development database |
+
+The local Grafana credentials and database settings in Compose are **development-only**. Do not reuse them in a deployed environment. To stop the stack, run `docker compose down`; add `-v` only if you intentionally want to remove local database data.
+
+### Run without Docker
+
+You need JDK 17, Maven, and a PostgreSQL database configured for the application. Then run:
+
+```bash
+mvn spring-boot:run
+```
+
+The default application port when run directly is `8080` (Compose maps its API to host port `8082`). Configure secrets through environment variables; never commit real credentials.
+
+## API documentation
+
+The development Swagger UI is available at `http://localhost:8082/swagger-ui/index.html` after starting Compose. The OpenAPI JSON is at `http://localhost:8082/v3/api-docs`. Production configuration disables these documentation endpoints by default.
+
+## Technology
+
+| Area | Technology |
+|---|---|
+| Language and framework | Java 17, Spring Boot |
+| API | Spring MVC, Springdoc OpenAPI |
+| Persistence | Spring Data JPA, PostgreSQL, Flyway |
+| Authentication | Spring Security, JWT |
+| Monitoring | Actuator, Micrometer, Prometheus, Grafana |
+| Build and runtime | Maven, Docker, Docker Compose |
+| Code quality | MapStruct, Lombok |
+
+## Repository map
+
+```text
+src/main/java/com/vaultstream/  Application code: API, services, models, security
+src/main/resources/             Runtime configuration and database migrations
+src/test/                       Automated tests
+.github/workflows/              CI and security workflows
+docker-compose.yml              Local development stack
+docker-compose.prod.yml         Production-oriented container example
+PRODUCTION_READINESS.md         Current launch decision and required gates
+```
+
+## Development checks
+
+Run the Maven verification lifecycle before proposing code changes:
+
+```bash
+mvn verify
+```
+
+The GitHub Actions workflows also build the project and run configured security checks. A passing build does not certify the application for handling real money.
+
+## Production and customer funds
+
+VaultStream is **not ready to accept customer funds**. Production flags disable customer transfers, manual adjustments, and self-registration by default. Do not enable them for real customers or connect a real payment source until the business model has been legally classified, the necessary authorization and regulated partner are in place, and the operational, security, reconciliation, and incident-response controls have been independently reviewed.
+
+For the current decision and a staged checklist, see [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). Treat the production Compose file as a deployment example, not proof of production readiness.
+
 
 ## Features
 
