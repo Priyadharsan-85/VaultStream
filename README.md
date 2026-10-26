@@ -130,15 +130,15 @@ python3 -c "import secrets,sys; sys.stdout.write(secrets.token_urlsafe(32))" > s
 chmod 600 secrets/*
 ```
 
-The PostgreSQL bootstrap role is a superuser used only by the database container during initialization. The app uses a separate runtime role for normal queries and a non-superuser migration role for Flyway. The migration role owns the application database; the runtime role receives data access to current and future tables and sequences. The application container does not receive the bootstrap credential, but it does receive the migration credential because Flyway currently runs during application startup. For a high-sensitivity deployment, move migrations into a separate one-shot job before launch so the long-running app never receives database-owner access.
+The PostgreSQL bootstrap role is a superuser used only by the database container during initialization. The long-running app uses a runtime role with data access to current and future tables and sequences. A separate one-shot container runs Flyway with a non-superuser migration role that owns the application database. The application container does not receive either the bootstrap or migration credential.
 
-The initialization script creates these roles only when PostgreSQL initializes a new, empty data volume. Do not point this Compose setup at an existing database volume without first applying and reviewing an equivalent role/grant migration and confirming a recoverable backup. Secret files are mounted read-only into the containers and loaded by Spring's config tree support. Keep `.env` and the `secrets/` directory out of source control and protect them on the deployment host. Then start the stack:
+The initialization script creates these roles only when PostgreSQL initializes a new, empty data volume. Do not point this Compose setup at an existing database volume without first applying and reviewing an equivalent role/grant migration and confirming a recoverable backup. The production profile disables automatic Flyway runs in the API container; Compose starts the API only after the migration container exits successfully. Secret files are mounted read-only into the containers and loaded by Spring's config tree support. Keep `.env` and the `secrets/` directory out of source control and protect them on the deployment host. Then start the stack:
 
 ```bash
 docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 ```
 
-The app starts only after PostgreSQL reports healthy. Flyway applies schema migrations on startup. PostgreSQL is not published to the host, and the app container runs as a non-root user with a read-only filesystem. Back up the PostgreSQL volume using a tested database backup and restore process before handling real data.
+The migration job and app start only after PostgreSQL reports healthy; the app waits for the migration job to complete successfully. PostgreSQL is not published to the host, and both application containers run as non-root users with read-only filesystems. Back up the PostgreSQL volume using a tested database backup and restore process before handling real data.
 
 #### Database backups
 

@@ -36,12 +36,13 @@ services:
     depends_on:
       vaultstream-db:
         condition: service_healthy
+      vaultstream-migrate:
+        condition: service_completed_successfully
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://vaultstream-db:5432/${DB_NAME:?Set DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
-      SPRING_FLYWAY_USER: ${DB_MIGRATION_USERNAME:?Set DB_MIGRATION_USERNAME}
       SPRING_CONFIG_IMPORT: configtree:/run/secrets/
       VAULTSTREAM_ADMIN_USERNAME: ${VAULTSTREAM_ADMIN_USERNAME:?Set VAULTSTREAM_ADMIN_USERNAME}
       VAULTSTREAM_ALLOWED_ORIGINS: ${VAULTSTREAM_ALLOWED_ORIGINS:?Set VAULTSTREAM_ALLOWED_ORIGINS}
@@ -66,12 +67,44 @@ services:
     secrets:
       - source: db_password
         target: SPRING_DATASOURCE_PASSWORD
-      - source: db_migration_password
-        target: SPRING_FLYWAY_PASSWORD
       - source: jwt_secret
         target: JWT_SECRET
       - source: admin_password
         target: VAULTSTREAM_ADMIN_PASSWORD
+
+  vaultstream-migrate:
+    image: vaultstream:production
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    init: true
+    depends_on:
+      vaultstream-db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,migration
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://vaultstream-db:5432/${DB_NAME:?Set DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_MIGRATION_USERNAME:?Set DB_MIGRATION_USERNAME}
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      VAULTSTREAM_ALLOWED_ORIGINS: ${VAULTSTREAM_ALLOWED_ORIGINS:?Set VAULTSTREAM_ALLOWED_ORIGINS}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      disable: true
+    networks:
+      - backend
+    secrets:
+      - source: db_migration_password
+        target: SPRING_DATASOURCE_PASSWORD
+      - source: jwt_secret
+        target: JWT_SECRET
 
 volumes:
   postgres_data:

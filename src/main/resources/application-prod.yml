@@ -8,6 +8,8 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+  flyway:
+    enabled: false
   jpa:
     hibernate:
       ddl-auto: none  # Flyway handles schema migrations
