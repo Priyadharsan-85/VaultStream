@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: vaultstream-demo
+    runtime: docker
+    branch: main
+    region: singapore
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health/liveness
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod,render
+      - key: VAULTSTREAM_REGISTRATION_ENABLED
+        value: "false"
+      - key: VAULTSTREAM_LEDGER_MANUAL_ADJUSTMENTS_ENABLED
+        value: "false"
+      - key: VAULTSTREAM_CUSTOMER_TRANSFERS_ENABLED
+        value: "false"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: VAULTSTREAM_ADMIN_USERNAME
+        sync: false
+      - key: VAULTSTREAM_ADMIN_PASSWORD
+        sync: false

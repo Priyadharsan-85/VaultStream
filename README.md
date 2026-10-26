@@ -158,6 +158,8 @@ VaultStream is **not ready to accept customer funds**. Production flags disable 
 
 For the current decision and a staged checklist, see [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md). Treat the production Compose file as a deployment example, not proof of production readiness.
 
+For a synthetic-data portfolio deployment only, see the [Render demo setup](RENDER_DEMO.md). It does not enable or support customer funds.
+
 
 ## Features
 

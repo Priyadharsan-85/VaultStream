@@ -1,0 +1,17 @@
+# Render + Neon are used only for the synthetic-data demo environment.
+# Render's free plan cannot run a separate pre-deploy migration command, so
+# Flyway runs at application startup against the demo database.
+spring:
+  flyway:
+    enabled: true
+  datasource:
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 0
+      idle-timeout: 300000
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

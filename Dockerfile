@@ -13,5 +13,5 @@ COPY --from=build --chown=vaultstream:vaultstream /workspace/target/vaultstream-
 
 USER vaultstream
 EXPOSE 8081
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 CMD wget -q -O - http://127.0.0.1:8081/actuator/health >/dev/null || exit 1
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 CMD-SHELL wget -q -O - "http://127.0.0.1:${PORT:-${SERVER_PORT:-8080}}/actuator/health/liveness" >/dev/null || exit 1
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=55.0", "-XX:+UseSerialGC", "-jar", "/app/app.jar"]
