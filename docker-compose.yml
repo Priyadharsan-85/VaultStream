@@ -2,7 +2,7 @@ services:
   vaultstream-app:
     build: .
     ports:
-      - "8082:8081"
+      - "127.0.0.1:8082:8081"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://vaultstream-db:5432/vaultstream
       - SPRING_DATASOURCE_USERNAME=vaultstream_user
@@ -20,7 +20,7 @@ services:
   vaultstream-db:
     image: postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_DB=vaultstream
       - POSTGRES_USER=vaultstream_user
@@ -33,7 +33,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
@@ -43,7 +43,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
     environment:
