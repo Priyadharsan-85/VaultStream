@@ -13,5 +13,6 @@ public interface TransactionMapper {
 
     TransactionDto toDto(Transaction transaction);
 
+    @Mapping(target = "createdAt", ignore = true)
     Transaction toEntity(TransactionDto dto);
 }

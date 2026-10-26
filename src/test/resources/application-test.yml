@@ -12,12 +12,10 @@ spring:
     username: sa
     password:
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: create-drop
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
   mail:
     host: localhost
     port: 25

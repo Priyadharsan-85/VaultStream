@@ -1,7 +1,6 @@
 package com.vaultstream.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,16 +32,16 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().verifyWith(getSigningKey()).build().parseClaimsJws(token);
+            Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
             return true;
         } catch (io.jsonwebtoken.security.SignatureException ex) {
             log.error("Invalid JWT signature");
@@ -62,7 +61,7 @@ public class JwtTokenProvider {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
+                .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
     }
@@ -71,7 +70,7 @@ public class JwtTokenProvider {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
+                .parseSignedClaims(token)
                 .getPayload()
                 .getExpiration();
     }

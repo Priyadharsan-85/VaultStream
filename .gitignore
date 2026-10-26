@@ -33,3 +33,5 @@ secrets/
 logs/
 backups/
 *.db
+*.backup
+*.bak
