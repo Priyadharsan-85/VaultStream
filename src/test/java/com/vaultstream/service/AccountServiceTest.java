@@ -17,6 +17,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -45,6 +48,26 @@ class AccountServiceTest {
 
         assertSame(dto, accountService.getAccountById(id, "alice"));
         verify(accountRepository).findByIdAndOwnerUser_Username(id, "alice");
+    }
+
+    @Test
+    void getAccountById_WhenCallerIsAdmin_LooksUpByIdDirectly() {
+        UUID id = UUID.randomUUID();
+        Account account = Account.builder().id(id).build();
+        AccountDto dto = AccountDto.builder().id(id).build();
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        try {
+            when(accountRepository.findById(id)).thenReturn(Optional.of(account));
+            when(accountMapper.toDto(account)).thenReturn(dto);
+
+            assertSame(dto, accountService.getAccountById(id, "admin"));
+            verify(accountRepository).findById(id);
+            verify(accountRepository, never()).findByIdAndOwnerUser_Username(any(), any());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

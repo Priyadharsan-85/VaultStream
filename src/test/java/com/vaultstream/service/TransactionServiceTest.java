@@ -17,8 +17,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
@@ -85,6 +89,33 @@ class TransactionServiceTest {
                 StreamSupport.stream(entries.spliterator(), false).count() == 2));
         verify(transactionMetrics).incrementDepositCount();
         verify(webSocketService).sendTransactionEvent(accountId, saved);
+    }
+
+    @Test
+    void deposit_WhenCallerIsAdmin_FindsAccountWithoutOwnerRestriction() {
+        UUID accountId = UUID.randomUUID();
+        Account account = Account.builder().id(accountId).balance(new BigDecimal("10.00"))
+                .status(Account.AccountStatus.ACTIVE).build();
+        Transaction saved = Transaction.builder().id(UUID.randomUUID()).accountId(accountId)
+                .amount(new BigDecimal("50.00")).type(Transaction.TransactionType.DEPOSIT).build();
+        TransactionDto dto = TransactionDto.builder().id(saved.getId()).build();
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "", List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        try {
+            when(accountRepository.findAllByIdsForUpdate(List.of(accountId))).thenReturn(List.of(account));
+            when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
+            when(ledgerJournalRepository.save(any(LedgerJournal.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(transactionMapper.toDto(saved)).thenReturn(dto);
+
+            TransactionDto result = transactionService.deposit(accountId, new BigDecimal("50.00"), "ref-adm", "Admin grant", "admin");
+            assertSame(dto, result);
+            assertEquals(new BigDecimal("60.00"), account.getBalance());
+            verify(accountRepository).findAllByIdsForUpdate(List.of(accountId));
+            verify(accountRepository, never()).findOwnedByIdForUpdate(any(), any());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

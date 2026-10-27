@@ -9,6 +9,8 @@ import com.vaultstream.model.Account.AccountStatus;
 import com.vaultstream.repository.AccountRepository;
 import com.vaultstream.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,15 +30,21 @@ public class AccountService {
 
     @Transactional(readOnly = true)
     public AccountDto getAccountById(UUID id, String ownerUsername) {
-        Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        Account account = isCallerAdmin()
+                ? accountRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id))
+                : accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
         return accountMapper.toDto(account);
     }
 
     @Transactional(readOnly = true)
     public AccountDto getAccountByAccountNumber(String accountNumber, String ownerUsername) {
-        Account account = accountRepository.findByAccountNumberAndOwnerUser_Username(accountNumber, ownerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with account number: " + accountNumber));
+        Account account = isCallerAdmin()
+                ? accountRepository.findByAccountNumber(accountNumber)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with account number: " + accountNumber))
+                : accountRepository.findByAccountNumberAndOwnerUser_Username(accountNumber, ownerUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with account number: " + accountNumber));
         return accountMapper.toDto(account);
     }
 
@@ -67,8 +75,11 @@ public class AccountService {
 
     @Transactional
     public AccountDto updateAccount(UUID id, AccountDto accountDto, String ownerUsername) {
-        Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        Account account = isCallerAdmin()
+                ? accountRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id))
+                : accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
 
         // Update fields
         if (accountDto.getAccountHolderName() != null) {
@@ -91,8 +102,11 @@ public class AccountService {
 
     @Transactional
     public void deleteAccount(UUID id, String ownerUsername) {
-        Account account = accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        Account account = isCallerAdmin()
+                ? accountRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id))
+                : accountRepository.findByIdAndOwnerUser_Username(id, ownerUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
         if (account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
             throw new IllegalStateException("Account must have a zero balance before it can be closed");
         }
@@ -101,4 +115,9 @@ public class AccountService {
         accountMetrics.incrementAccountDeletedCount();
     }
 
+    private boolean isCallerAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    }
 }

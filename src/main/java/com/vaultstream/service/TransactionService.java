@@ -17,6 +17,8 @@ import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -238,6 +240,12 @@ public class TransactionService {
     }
 
     private Account findOwnedAccountForUpdate(UUID accountId, String ownerUsername) {
+        if (isCallerAdmin()) {
+            return accountRepository.findAllByIdsForUpdate(java.util.List.of(accountId))
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+        }
         return accountRepository.findOwnedByIdForUpdate(accountId, ownerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
     }
@@ -257,9 +265,21 @@ public class TransactionService {
     }
 
     private void requireAccountOwnership(UUID accountId, String ownerUsername) {
+        if (isCallerAdmin()) {
+            if (!accountRepository.existsById(accountId)) {
+                throw new ResourceNotFoundException("Transaction not found");
+            }
+            return;
+        }
         if (!accountRepository.existsByIdAndOwnerUser_Username(accountId, ownerUsername)) {
             throw new ResourceNotFoundException("Transaction not found");
         }
+    }
+
+    private boolean isCallerAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 
     private void postBalancedJournal(TransactionType type, String referenceId, String description,
