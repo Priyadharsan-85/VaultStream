@@ -41,6 +41,7 @@ vaultstream:
   ledger:
     manual-adjustments-enabled: true
     customer-transfers-enabled: true
+    reconciliation-interval-ms: 3600000
     batch-size: 1000
     flush-interval-ms: 5000
     retry-attempts: 3
