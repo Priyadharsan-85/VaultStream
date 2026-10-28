@@ -2,6 +2,7 @@ package com.vaultstream.auth;
 
 import com.vaultstream.model.AppUser;
 import com.vaultstream.security.JwtTokenProvider;
+import com.vaultstream.security.LoginAttemptService;
 import com.vaultstream.security.TokenRevocationService;
 import com.vaultstream.repository.AppUserRepository;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ public class AuthController {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenRevocationService tokenRevocationService;
+    private final LoginAttemptService loginAttemptService;
 
     @Value("${vaultstream.security.registration-enabled:true}")
     private boolean registrationEnabled = true;
@@ -56,18 +58,27 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthDto.LoginResponse> login(@Valid @RequestBody AuthDto.LoginRequest loginRequest) {
+        String username = loginRequest.getUsername();
+        if (loginAttemptService.isBlocked(username)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(new AuthDto.LoginResponse(null, "Account temporarily locked due to excessive failed login attempts. Please try again later."));
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginRequest.getUsername(),
+                            username,
                             loginRequest.getPassword()
                     )
             );
 
+            loginAttemptService.loginSucceeded(username);
             String token = jwtTokenProvider.generateToken(authentication);
             return ResponseEntity.ok(new AuthDto.LoginResponse(token, null));
         } catch (AuthenticationException ex) {
-            return ResponseEntity.status(401).body(new AuthDto.LoginResponse(null, "Invalid credentials"));
+            loginAttemptService.loginFailed(username);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new AuthDto.LoginResponse(null, "Invalid credentials"));
         }
     }
 

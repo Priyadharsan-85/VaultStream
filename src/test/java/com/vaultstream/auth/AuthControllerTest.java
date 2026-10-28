@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vaultstream.auth.AuthDto.LoginRequest;
 import com.vaultstream.auth.AuthDto.LoginResponse;
 import com.vaultstream.security.JwtTokenProvider;
+import com.vaultstream.security.LoginAttemptService;
 import com.vaultstream.repository.AppUserRepository;
 import com.vaultstream.idempotency.IdempotencyService;
 import com.vaultstream.security.TokenRevocationService;
@@ -60,6 +61,9 @@ class AuthControllerTest {
     private TokenRevocationService tokenRevocationService;
 
     @MockBean
+    private LoginAttemptService loginAttemptService;
+
+    @MockBean
     private com.vaultstream.service.AccountService accountService;
 
     @InjectMocks
@@ -79,6 +83,7 @@ class AuthControllerTest {
     @Test
     void login_ShouldReturnToken_WhenValidCredentialsProvided() throws Exception {
         // Arrange
+        when(loginAttemptService.isBlocked("testuser")).thenReturn(false);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenReturn(mockAuthentication);
         when(jwtTokenProvider.generateToken(mockAuthentication)).thenReturn("test-jwt-token");
@@ -91,13 +96,16 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").value("test-jwt-token"))
                 .andExpect(jsonPath("$.errorMessage").doesNotExist());
 
+        verify(loginAttemptService).isBlocked("testuser");
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(loginAttemptService).loginSucceeded("testuser");
         verify(jwtTokenProvider).generateToken(mockAuthentication);
     }
 
     @Test
     void login_ShouldReturnError_WhenInvalidCredentialsProvided() throws Exception {
         // Arrange
+        when(loginAttemptService.isBlocked("invaliduser")).thenReturn(false);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
@@ -109,7 +117,27 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(jsonPath("$.errorMessage").value("Invalid credentials"));
 
+        verify(loginAttemptService).isBlocked("invaliduser");
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(loginAttemptService).loginFailed("invaliduser");
+        verify(loginAttemptService, never()).loginSucceeded(any());
+    }
+
+    @Test
+    void login_ShouldReturnTooManyRequests_WhenAccountIsLockedDueToFailedAttempts() throws Exception {
+        // Arrange
+        when(loginAttemptService.isBlocked("testuser")).thenReturn(true);
+
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validLoginRequest)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(jsonPath("$.errorMessage").value("Account temporarily locked due to excessive failed login attempts. Please try again later."));
+
+        verify(loginAttemptService).isBlocked("testuser");
+        verify(authenticationManager, never()).authenticate(any());
     }
 
     @Test
