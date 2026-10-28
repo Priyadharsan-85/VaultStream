@@ -29,6 +29,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("endTime") LocalDateTime endTime,
             Pageable pageable);
 
+    @Query("SELECT t FROM Transaction t WHERE t.accountId = :accountId AND t.timestamp >= :startTime AND t.timestamp <= :endTime ORDER BY t.timestamp ASC, t.id ASC")
+    List<Transaction> findAllByAccountIdAndTimeRange(
+            @Param("accountId") UUID accountId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
+
     Optional<Transaction> findByReferenceId(String referenceId);
 
     @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE account_id = :accountId AND type = :type",

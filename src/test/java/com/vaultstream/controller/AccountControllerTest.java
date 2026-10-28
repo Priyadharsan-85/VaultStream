@@ -1,7 +1,9 @@
 package com.vaultstream.controller;
 
 import com.vaultstream.dto.AccountDto;
+import com.vaultstream.dto.AccountStatementDto;
 import com.vaultstream.service.AccountService;
+import com.vaultstream.service.AccountStatementService;
 import com.vaultstream.service.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,16 +11,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,6 +41,9 @@ class AccountControllerTest {
 
     @Mock
     private TransactionService transactionService;
+
+    @Mock
+    private AccountStatementService accountStatementService;
 
     @InjectMocks
     private AccountController accountController;
@@ -91,6 +97,25 @@ class AccountControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertSame(accounts, response.getBody());
         verify(accountService).getAllAccounts(USERNAME, pageable);
+    }
+
+    @Test
+    void getAccountStatement_PassesParametersToStatementService() {
+        LocalDateTime start = LocalDateTime.now().minusDays(7);
+        LocalDateTime end = LocalDateTime.now();
+        AccountStatementDto statement = AccountStatementDto.builder()
+                .accountId(accountId)
+                .openingBalance(new BigDecimal("100.00"))
+                .closingBalance(new BigDecimal("150.00"))
+                .build();
+
+        when(accountStatementService.generateStatement(accountId, start, end, USERNAME)).thenReturn(statement);
+
+        ResponseEntity<AccountStatementDto> response = accountController.getAccountStatement(accountId, start, end, principal);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertSame(statement, response.getBody());
+        verify(accountStatementService).generateStatement(accountId, start, end, USERNAME);
     }
 
     @Test

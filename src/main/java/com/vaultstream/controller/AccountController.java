@@ -1,7 +1,9 @@
 package com.vaultstream.controller;
 
 import com.vaultstream.dto.AccountDto;
+import com.vaultstream.dto.AccountStatementDto;
 import com.vaultstream.service.AccountService;
+import com.vaultstream.service.AccountStatementService;
 import com.vaultstream.service.TransactionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -11,15 +13,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
 import java.security.Principal;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -29,6 +32,7 @@ public class AccountController {
 
     private final AccountService accountService;
     private final TransactionService transactionService;
+    private final AccountStatementService accountStatementService;
 
     @GetMapping("/{id}")
     public ResponseEntity<AccountDto> getAccountById(@PathVariable UUID id, Principal principal) {
@@ -51,6 +55,17 @@ public class AccountController {
                 Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
         Page<AccountDto> accounts = accountService.getAllAccounts(principal.getName(), pageable);
         return ResponseEntity.ok(accounts);
+    }
+
+    @GetMapping("/{id}/statement")
+    public ResponseEntity<AccountStatementDto> getAccountStatement(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
+            Principal principal) {
+        AccountStatementDto statement = accountStatementService.generateStatement(
+                id, startTime, endTime, principal.getName());
+        return ResponseEntity.ok(statement);
     }
 
     @PostMapping

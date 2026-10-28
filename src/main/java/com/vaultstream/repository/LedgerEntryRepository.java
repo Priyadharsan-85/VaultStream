@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Repository
@@ -21,4 +22,8 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
     @Query("SELECT COALESCE(SUM(CASE WHEN e.direction = com.vaultstream.model.LedgerEntry.Direction.CREDIT THEN e.amount ELSE -e.amount END), 0) " +
            "FROM LedgerEntry e WHERE e.accountId = :accountId")
     BigDecimal calculateLedgerBalanceForAccount(@Param("accountId") UUID accountId);
+
+    @Query("SELECT COALESCE(SUM(CASE WHEN e.direction = com.vaultstream.model.LedgerEntry.Direction.CREDIT THEN e.amount ELSE -e.amount END), 0) " +
+           "FROM LedgerEntry e WHERE e.accountId = :accountId AND e.createdAt < :timestamp")
+    BigDecimal calculateLedgerBalanceBefore(@Param("accountId") UUID accountId, @Param("timestamp") LocalDateTime timestamp);
 }
