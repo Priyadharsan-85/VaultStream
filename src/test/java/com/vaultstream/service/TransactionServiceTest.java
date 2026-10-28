@@ -301,4 +301,82 @@ class TransactionServiceTest {
         verify(accountRepository, never()).save(any());
         verifyNoInteractions(ledgerJournalRepository, ledgerEntryRepository);
     }
+
+    @Test
+    void getTransactionByReferenceId_WhenTransferHasTwoTransactions_ReturnsTheCallersTransaction() {
+        String refId = "ref-multi-123";
+        UUID aliceAccountId = UUID.randomUUID();
+        UUID bobAccountId = UUID.randomUUID();
+
+        Transaction aliceTx = Transaction.builder().id(UUID.randomUUID()).accountId(aliceAccountId)
+                .amount(new BigDecimal("50.00")).type(Transaction.TransactionType.TRANSFER_OUT)
+                .referenceId(refId).build();
+        Transaction bobTx = Transaction.builder().id(UUID.randomUUID()).accountId(bobAccountId)
+                .amount(new BigDecimal("50.00")).type(Transaction.TransactionType.TRANSFER_IN)
+                .referenceId(refId).build();
+        TransactionDto aliceDto = TransactionDto.builder().id(aliceTx.getId()).build();
+
+        when(transactionRepository.findAllByReferenceId(refId)).thenReturn(List.of(bobTx, aliceTx));
+        when(accountRepository.existsByIdAndOwnerUser_Username(bobAccountId, "alice")).thenReturn(false);
+        when(accountRepository.existsByIdAndOwnerUser_Username(aliceAccountId, "alice")).thenReturn(true);
+        when(transactionMapper.toDto(aliceTx)).thenReturn(aliceDto);
+
+        TransactionDto result = transactionService.getTransactionByReferenceId(refId, "alice");
+
+        assertSame(aliceDto, result);
+        verify(accountRepository).existsByIdAndOwnerUser_Username(bobAccountId, "alice");
+        verify(accountRepository).existsByIdAndOwnerUser_Username(aliceAccountId, "alice");
+    }
+
+    @Test
+    void deposit_WhenDuplicateReferenceId_ReturnsExistingTransactionWithoutMutatingBalance() {
+        UUID accountId = UUID.randomUUID();
+        String refId = "dup-ref-1";
+        Account account = Account.builder().id(accountId).balance(new BigDecimal("1000.00"))
+                .status(Account.AccountStatus.ACTIVE).build();
+        Transaction existing = Transaction.builder().id(UUID.randomUUID()).accountId(accountId)
+                .amount(new BigDecimal("100.00")).type(Transaction.TransactionType.DEPOSIT)
+                .referenceId(refId).build();
+        TransactionDto dto = TransactionDto.builder().id(existing.getId()).build();
+
+        when(accountRepository.findOwnedByIdForUpdate(accountId, "alice")).thenReturn(Optional.of(account));
+        when(transactionRepository.findByAccountIdAndReferenceId(accountId, refId)).thenReturn(Optional.of(existing));
+        when(transactionMapper.toDto(existing)).thenReturn(dto);
+
+        TransactionDto result = transactionService.deposit(accountId, new BigDecimal("100.00"), refId, "deposit", "alice");
+
+        assertSame(dto, result);
+        assertEquals(new BigDecimal("1000.00"), account.getBalance());
+        verify(accountRepository, never()).save(any());
+        verifyNoInteractions(ledgerJournalRepository, ledgerEntryRepository, transactionMetrics, webSocketService);
+    }
+
+    @Test
+    void transfer_WhenDuplicateReferenceId_ReturnsExistingTransactionWithoutMutatingBalances() {
+        UUID fromId = UUID.randomUUID();
+        UUID toId = UUID.randomUUID();
+        String refId = "dup-tx-ref";
+        AppUser alice = AppUser.builder().id(UUID.randomUUID()).username("alice").build();
+        Account fromAccount = Account.builder().id(fromId).balance(new BigDecimal("2000.00"))
+                .status(Account.AccountStatus.ACTIVE).ownerUser(alice).build();
+        Account toAccount = Account.builder().id(toId).balance(new BigDecimal("500.00"))
+                .status(Account.AccountStatus.ACTIVE).build();
+        Transaction existing = Transaction.builder().id(UUID.randomUUID()).accountId(fromId)
+                .amount(new BigDecimal("250.00")).type(Transaction.TransactionType.TRANSFER_OUT)
+                .referenceId(refId).build();
+        TransactionDto dto = TransactionDto.builder().id(existing.getId()).build();
+
+        when(accountRepository.findAllByIdsForUpdate(List.of(fromId, toId))).thenReturn(List.of(fromAccount, toAccount));
+        when(transactionRepository.sumDailyTransferOutAmount(eq(fromId), any(LocalDateTime.class))).thenReturn(BigDecimal.ZERO);
+        when(transactionRepository.findByAccountIdAndReferenceId(fromId, refId)).thenReturn(Optional.of(existing));
+        when(transactionMapper.toDto(existing)).thenReturn(dto);
+
+        TransactionDto result = transactionService.transfer(fromId, toId, new BigDecimal("250.00"), refId, "transfer", "alice");
+
+        assertSame(dto, result);
+        assertEquals(new BigDecimal("2000.00"), fromAccount.getBalance());
+        assertEquals(new BigDecimal("500.00"), toAccount.getBalance());
+        verify(accountRepository, never()).save(any());
+        verifyNoInteractions(ledgerJournalRepository, ledgerEntryRepository, transactionMetrics, webSocketService);
+    }
 }

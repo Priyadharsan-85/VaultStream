@@ -12,7 +12,9 @@ import java.util.UUID;
         @Index(name = "idx_transaction_account_id", columnList = "account_id"),
         @Index(name = "idx_transaction_timestamp", columnList = "timestamp"),
         @Index(name = "idx_transaction_type", columnList = "type"),
-        @Index(name = "idx_transaction_account_timestamp_id", columnList = "account_id, timestamp, id")
+        @Index(name = "idx_transaction_account_timestamp_id", columnList = "account_id, timestamp, id"),
+        @Index(name = "idx_transaction_reference_id", columnList = "reference_id"),
+        @Index(name = "idx_transaction_account_ref", columnList = "account_id, reference_id")
 })
 @Getter
 @Setter

@@ -272,4 +272,33 @@ class TransactionRepositoryTest {
         assertEquals(0, BigDecimal.valueOf(150.00).compareTo(depositSum));
         assertEquals(0, BigDecimal.valueOf(30.00).compareTo(withdrawalSum));
     }
+
+    @Test
+    void findAllByReferenceId_ShouldReturnAllTransactionsWithSameReference() {
+        UUID acc1 = UUID.randomUUID();
+        UUID acc2 = UUID.randomUUID();
+        String ref = "SHARED-REF-99";
+        Transaction t1 = Transaction.builder().accountId(acc1).amount(BigDecimal.valueOf(50)).type(TransactionType.TRANSFER_OUT).referenceId(ref).build();
+        Transaction t2 = Transaction.builder().accountId(acc2).amount(BigDecimal.valueOf(50)).type(TransactionType.TRANSFER_IN).referenceId(ref).build();
+        transactionRepository.save(t1);
+        transactionRepository.save(t2);
+
+        List<Transaction> result = transactionRepository.findAllByReferenceId(ref);
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void findByAccountIdAndReferenceId_ShouldReturnSpecificAccountTransaction() {
+        UUID acc1 = UUID.randomUUID();
+        String ref = "ACCOUNT-REF-1";
+        Transaction t1 = Transaction.builder().accountId(acc1).amount(BigDecimal.valueOf(75.00)).type(TransactionType.DEPOSIT).referenceId(ref).build();
+        transactionRepository.save(t1);
+
+        Optional<Transaction> found = transactionRepository.findByAccountIdAndReferenceId(acc1, ref);
+        assertTrue(found.isPresent());
+        assertEquals(0, BigDecimal.valueOf(75.00).compareTo(found.get().getAmount()));
+
+        Optional<Transaction> notFound = transactionRepository.findByAccountIdAndReferenceId(UUID.randomUUID(), ref);
+        assertTrue(notFound.isEmpty());
+    }
 }

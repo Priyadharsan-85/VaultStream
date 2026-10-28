@@ -3,36 +3,38 @@ package com.vaultstream.service;
 import com.vaultstream.dto.TransactionDto;
 import com.vaultstream.exception.ResourceNotFoundException;
 import com.vaultstream.mapper.TransactionMapper;
-import com.vaultstream.monitoring.TransactionMetrics;
 import com.vaultstream.model.Account;
-import com.vaultstream.model.Transaction;
-import com.vaultstream.model.Transaction.TransactionType;
 import com.vaultstream.model.LedgerEntry;
 import com.vaultstream.model.LedgerJournal;
+import com.vaultstream.model.Transaction;
+import com.vaultstream.model.Transaction.TransactionType;
+import com.vaultstream.monitoring.TransactionMetrics;
 import com.vaultstream.repository.AccountRepository;
 import com.vaultstream.repository.LedgerEntryRepository;
 import com.vaultstream.repository.LedgerJournalRepository;
 import com.vaultstream.repository.TransactionRepository;
 import com.vaultstream.websocket.WebSocketService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
@@ -67,10 +69,19 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public TransactionDto getTransactionByReferenceId(String referenceId, String ownerUsername) {
-        Transaction transaction = transactionRepository.findByReferenceId(referenceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with reference id: " + referenceId));
-        requireAccountOwnership(transaction.getAccountId(), ownerUsername);
-        return transactionMapper.toDto(transaction);
+        List<Transaction> transactions = transactionRepository.findAllByReferenceId(referenceId);
+        if (transactions.isEmpty()) {
+            throw new ResourceNotFoundException("Transaction not found with reference id: " + referenceId);
+        }
+
+        boolean admin = isCallerAdmin();
+        for (Transaction tx : transactions) {
+            if (admin || accountRepository.existsByIdAndOwnerUser_Username(tx.getAccountId(), ownerUsername)) {
+                return transactionMapper.toDto(tx);
+            }
+        }
+
+        throw new ResourceNotFoundException("Transaction not found with reference id: " + referenceId);
     }
 
     @Transactional(readOnly = true)
@@ -104,6 +115,14 @@ public class TransactionService {
 
         if (account.getStatus() != Account.AccountStatus.ACTIVE) {
             throw new IllegalStateException("Account is not active for transactions");
+        }
+
+        if (referenceId != null && !referenceId.trim().isEmpty()) {
+            Optional<Transaction> existing = transactionRepository.findByAccountIdAndReferenceId(accountId, referenceId.trim());
+            if (existing.isPresent()) {
+                log.info("Duplicate deposit reference '{}' on account '{}' returning existing transaction", referenceId, accountId);
+                return transactionMapper.toDto(existing.get());
+            }
         }
 
         // Update account balance
@@ -145,6 +164,14 @@ public class TransactionService {
 
         if (account.getBalance().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Insufficient funds for withdrawal");
+        }
+
+        if (referenceId != null && !referenceId.trim().isEmpty()) {
+            Optional<Transaction> existing = transactionRepository.findByAccountIdAndReferenceId(accountId, referenceId.trim());
+            if (existing.isPresent()) {
+                log.info("Duplicate withdrawal reference '{}' on account '{}' returning existing transaction", referenceId, accountId);
+                return transactionMapper.toDto(existing.get());
+            }
         }
 
         // Update account balance
@@ -218,6 +245,14 @@ public class TransactionService {
 
         if (fromAccount.getBalance().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Insufficient funds for transfer");
+        }
+
+        if (referenceId != null && !referenceId.trim().isEmpty()) {
+            Optional<Transaction> existing = transactionRepository.findByAccountIdAndReferenceId(fromAccountId, referenceId.trim());
+            if (existing.isPresent()) {
+                log.info("Duplicate transfer reference '{}' from account '{}' returning existing transaction", referenceId, fromAccountId);
+                return transactionMapper.toDto(existing.get());
+            }
         }
 
         // Update balances
