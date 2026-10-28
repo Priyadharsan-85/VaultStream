@@ -42,6 +42,8 @@ vaultstream:
     manual-adjustments-enabled: true
     customer-transfers-enabled: true
     reconciliation-interval-ms: 3600000
+    max-transfer-amount: 50000.00
+    daily-transfer-limit: 100000.00
     batch-size: 1000
     flush-interval-ms: 5000
     retry-attempts: 3

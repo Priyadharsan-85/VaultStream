@@ -49,6 +49,12 @@ public class TransactionService {
     @Value("${vaultstream.ledger.customer-transfers-enabled:true}")
     private boolean customerTransfersEnabled = true;
 
+    @Value("${vaultstream.ledger.max-transfer-amount:50000.00}")
+    private BigDecimal maxTransferAmount = new BigDecimal("50000.00");
+
+    @Value("${vaultstream.ledger.daily-transfer-limit:100000.00}")
+    private BigDecimal dailyTransferLimit = new BigDecimal("100000.00");
+
     private static final UUID CLEARING_ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
     @Transactional(readOnly = true)
@@ -189,6 +195,20 @@ public class TransactionService {
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Transfer amount must be positive");
+        }
+
+        if (maxTransferAmount != null && maxTransferAmount.compareTo(BigDecimal.ZERO) > 0
+                && amount.compareTo(maxTransferAmount) > 0) {
+            throw new IllegalArgumentException("Transfer amount exceeds maximum single transfer limit of " + maxTransferAmount);
+        }
+
+        if (dailyTransferLimit != null && dailyTransferLimit.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal recentOutflow = transactionRepository.sumDailyTransferOutAmount(
+                    fromAccountId, LocalDateTime.now().minusHours(24));
+            BigDecimal currentTotal = recentOutflow != null ? recentOutflow : BigDecimal.ZERO;
+            if (currentTotal.add(amount).compareTo(dailyTransferLimit) > 0) {
+                throw new IllegalArgumentException("Transfer exceeds daily transfer limit of " + dailyTransferLimit);
+            }
         }
 
         if (fromAccount.getStatus() != Account.AccountStatus.ACTIVE ||

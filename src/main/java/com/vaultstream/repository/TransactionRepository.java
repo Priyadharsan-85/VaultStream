@@ -35,6 +35,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime);
 
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.accountId = :accountId AND t.type = com.vaultstream.model.Transaction.TransactionType.TRANSFER_OUT AND t.timestamp >= :since")
+    BigDecimal sumDailyTransferOutAmount(@Param("accountId") UUID accountId, @Param("since") LocalDateTime since);
+
     Optional<Transaction> findByReferenceId(String referenceId);
 
     @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE account_id = :accountId AND type = :type",
