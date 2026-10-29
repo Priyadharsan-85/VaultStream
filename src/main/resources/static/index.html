@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VaultStream is an educational ledger API portfolio project built with Java and Spring Boot.">
+  <meta name="theme-color" content="#0b1020">
+  <title>VaultStream | Ledger API portfolio</title>
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="VaultStream home"><span class="brand-mark">V</span>VaultStream</a>
+    <nav aria-label="Main navigation">
+      <a href="#architecture">Architecture</a>
+      <a href="#capabilities">Capabilities</a>
+      <a class="nav-cta" href="https://github.com/Priyadharsan-85/VaultStream">View source <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero shell">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> EDUCATIONAL BACKEND PROJECT</p>
+        <h1>Build trust into every<br><span>ledger entry.</span></h1>
+        <p class="intro">VaultStream is a Java API portfolio project exploring double-entry accounting, secure transactions, and the operational details behind reliable financial software.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/Priyadharsan-85/VaultStream">Explore the code <span aria-hidden="true">↗</span></a>
+          <a class="button button-quiet" href="/actuator/health/liveness">Service health <span aria-hidden="true">→</span></a>
+        </div>
+        <p class="demo-note"><strong>Demo environment</strong> · Synthetic data only · No real payments or customer funds</p>
+      </div>
+      <div class="ledger-card" aria-label="Illustration of balanced debit and credit ledger entries">
+        <div class="card-head"><div><span class="card-label">LEDGER JOURNAL</span><h2>Transfer posted</h2></div><span class="pill">BALANCED</span></div>
+        <div class="journal-meta"><span>Reference</span><code>TX-2048-DEMO</code></div>
+        <div class="entry debit"><span class="entry-icon" aria-hidden="true">−</span><div><strong>Source account</strong><small>Debit · synthetic balance</small></div><b>₹ 250.00</b></div>
+        <div class="entry credit"><span class="entry-icon" aria-hidden="true">+</span><div><strong>Destination account</strong><small>Credit · synthetic balance</small></div><b>₹ 250.00</b></div>
+        <div class="balance-row"><span>Journal difference</span><strong>₹ 0.00</strong></div>
+        <div class="card-foot"><span class="check-icon" aria-hidden="true">✓</span> Debits and credits balance</div>
+      </div>
+    </section>
+
+    <section class="trust-strip" aria-label="Project technology">
+      <div class="shell trust-items"><span>JAVA 17</span><i></i><span>SPRING BOOT</span><i></i><span>POSTGRESQL</span><i></i><span>DOCKER</span><i></i><span>FLYWAY</span></div>
+    </section>
+
+    <section class="section shell" id="architecture">
+      <div class="section-heading"><p class="eyebrow">HOW IT FITS TOGETHER</p><h2>A clear path from request to ledger</h2><p>Each operation passes through authentication and validation before the database commits a balanced journal.</p></div>
+      <div class="flow" aria-label="Request flow: client to API, security, ledger service, and PostgreSQL">
+        <div class="flow-node"><span class="node-num">01</span><strong>API client</strong><small>Request + token</small></div><span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node"><span class="node-num">02</span><strong>Spring API</strong><small>Validate input</small></div><span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node"><span class="node-num">03</span><strong>Ledger service</strong><small>Apply rules</small></div><span class="flow-arrow" aria-hidden="true">→</span>
+        <div class="flow-node"><span class="node-num">04</span><strong>PostgreSQL</strong><small>Commit atomically</small></div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="capabilities">
+      <div class="shell">
+        <div class="section-heading"><p class="eyebrow">ENGINEERING SHOWCASE</p><h2>Patterns worth exploring</h2><p>A focused collection of backend features, each with clear limits for this demo environment.</p></div>
+        <div class="feature-grid">
+          <article class="feature-card"><span class="feature-icon">01</span><h3>Double-entry ledger</h3><p>Record paired entries and reconcile journals to verify each posting balances.</p></article>
+          <article class="feature-card"><span class="feature-icon">02</span><h3>Retry-safe requests</h3><p>Idempotency and duplicate-reference checks help make repeated requests predictable.</p></article>
+          <article class="feature-card"><span class="feature-icon">03</span><h3>API security</h3><p>JWT authentication, role checks, login throttling, and revocable tokens.</p></article>
+          <article class="feature-card"><span class="feature-icon">04</span><h3>Operational insight</h3><p>Health probes, metrics, database migrations, and automated build checks.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-banner shell">
+      <div><p class="eyebrow">SAFE BY DEFAULT</p><h2>Designed for a portfolio demo</h2><p>Registration, customer transfers, and manual balance changes are disabled in the hosted demo profile. Nothing here accepts or stores real funds.</p></div>
+      <a class="button button-outline" href="https://github.com/Priyadharsan-85/VaultStream/blob/main/PRODUCTION_READINESS.md">Read the launch status <span aria-hidden="true">↗</span></a>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="shell footer-inner"><a class="brand" href="/"><span class="brand-mark">V</span>VaultStream</a><p>Built as a learning and software engineering portfolio project.</p><a href="https://github.com/Priyadharsan-85/VaultStream">GitHub <span aria-hidden="true">↗</span></a></div></footer>
+</body>
+</html>

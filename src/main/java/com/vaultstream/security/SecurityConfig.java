@@ -54,6 +54,9 @@ public class SecurityConfig {
             .headers(headers -> headers
                 .frameOptions(frame -> frame.deny())
                 .contentTypeOptions(Customizer.withDefaults())
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; " +
+                        "form-action 'self'; img-src 'self' data:; style-src 'self'; upgrade-insecure-requests"))
                 .httpStrictTransportSecurity(hsts -> hsts
                     .includeSubDomains(true)
                     .maxAgeInSeconds(31536000))
@@ -65,6 +68,7 @@ public class SecurityConfig {
             .sessionManagement(sessionManagement -> sessionManagement
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers(HttpMethod.GET, "/", "/assets/**").permitAll()
                 .requestMatchers("/api/auth/logout").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()
