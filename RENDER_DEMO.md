@@ -16,7 +16,7 @@ This setup is for a public **demo with synthetic data only**. It is not approved
 
 ## Create the Render service
 
-Create a Render **Blueprint** from this repository's `main` branch. Render reads [`render.yaml`](render.yaml), which selects the free web service in Singapore, keeps the money-related feature flags disabled, and uses the liveness endpoint for health checks.
+Create a Render **Blueprint** from this repository's `main` branch. Render reads [`render.yaml`](render.yaml) and creates a Docker API service in Singapore plus a separate static React dashboard. The API keeps the money-related feature flags disabled and uses the liveness endpoint for health checks. The Blueprint connects the two public URLs and limits browser API access to the dashboard origin.
 
 Fill the values marked as private in the Render setup form:
 
@@ -35,12 +35,13 @@ The Render platform supplies the API port and public service URL. Keep `VAULTSTR
 
 After deployment, check:
 
-- `https://YOUR_RENDER_HOST/api/demo/overview` returns two synthetic accounts and their sample transactions without requiring a login. This route only returns the fixed demo records and supports `GET` only.
-- `https://YOUR_RENDER_HOST/actuator/health/liveness` returns a healthy response.
+- The `vaultstream-dashboard` static site URL opens the React dashboard and loads the synthetic sample data.
+- `https://YOUR_RENDER_API_HOST/api/demo/overview` returns two synthetic accounts and their sample transactions without requiring a login. This route only returns the fixed demo records and supports `GET` only.
+- `https://YOUR_RENDER_API_HOST/actuator/health/liveness` returns a healthy response.
 - Render logs show Flyway migrations completed before the API started.
 - The database contains only synthetic demo records.
 - No customer transfers, deposits, withdrawals, or real payment integrations are enabled.
 
-For a portfolio link, share the GitHub repository or the public demo endpoint (`https://YOUR_RENDER_HOST/api/demo/overview`). Keep administrator credentials private and do not publish a demo login or seed any real personal information.
+For a portfolio link, share the dashboard's public URL from Render. The API is hosted separately; its direct sample endpoint is available at `https://YOUR_RENDER_API_HOST/api/demo/overview`. Keep administrator credentials private and do not seed any real personal information.
 
 Render's free service can sleep when idle and has limited compute. This is suitable only for a hobby demo; it provides no production availability guarantee. Keep backups of anything you need because this setup does not configure backups for the Neon free database.

@@ -30,3 +30,37 @@ services:
         sync: false
       - key: VAULTSTREAM_ADMIN_PASSWORD
         sync: false
+      - key: VAULTSTREAM_ALLOWED_ORIGINS
+        fromService:
+          type: web
+          name: vaultstream-dashboard
+          envVarKey: RENDER_EXTERNAL_URL
+  - type: web
+    name: vaultstream-dashboard
+    runtime: static
+    branch: main
+    rootDir: frontend
+    buildCommand: npm ci --no-audit --no-fund && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.2
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: vaultstream-demo
+          envVarKey: RENDER_EXTERNAL_URL
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; base-uri 'self'; connect-src 'self' https://*.onrender.com; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

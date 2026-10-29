@@ -1,5 +1,8 @@
 # Maven
 target/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
 !**/src/main/**
 !**/src/test/**
 .apt_generated

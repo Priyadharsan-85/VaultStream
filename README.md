@@ -10,7 +10,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
 ![Demo only](https://img.shields.io/badge/use-synthetic%20demo%20only-blue)
 
-**VaultStream is a Java backend portfolio project exploring ledger integrity, API security, and operational safeguards.**
+**VaultStream is a Java backend portfolio project with a React dashboard for exploring ledger integrity, API security, and operational safeguards.**
 
 [Explore the design](#architecture) · [Run locally](#run-locally) · [Try the API](#api-overview) · [Deploy a demo](RENDER_DEMO.md) · [Production status](PRODUCTION_READINESS.md)
 
@@ -26,16 +26,17 @@
 | | |
 |---|---|
 | **What it demonstrates** | Double-entry ledger patterns, transactional APIs, JWT authentication, idempotency, reconciliation, and monitoring |
-| **Application type** | Backend REST API; no HTML frontend or customer wallet interface |
+| **Application type** | Read-only React portfolio dashboard plus Spring Boot REST API; no customer wallet interface |
 | **Demo data** | Use synthetic accounts and transactions only |
-| **Stack** | Java 17 · Spring Boot · PostgreSQL · Flyway · Docker |
+| **Stack** | Java 17 · Spring Boot · React · TypeScript · Vite · Tailwind CSS · PostgreSQL · Docker |
 | **Quality checks** | Maven verification, container build and image scan, CodeQL, dependency review |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Client[API client] --> API[Spring Boot API]
+    Visitor[Portfolio visitor] --> Dashboard[React dashboard]
+    Dashboard -->|Read-only synthetic data| API[Spring Boot demo API]
     API --> Auth[JWT authentication]
     API --> Services[Account and transaction services]
     Services --> Ledger[Double-entry ledger]
@@ -103,6 +104,18 @@ Install JDK 17, Maven, and PostgreSQL, set the database and JWT environment valu
 mvn spring-boot:run
 ```
 
+### Run the React dashboard
+
+Install Node.js 24 LTS, then start the dashboard from the frontend folder:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` requests to `http://localhost:8080`. To populate the dashboard locally, run the backend with its Render demo profile and a separate synthetic-data database. The hosted Render setup builds the dashboard as a static site and allows it to call only the public demo API.
+
 ## API overview
 
 Authentication is available at `/api/auth/login`. Account and transaction routes require a bearer token. Administrative routes require an administrator token.
@@ -116,11 +129,11 @@ Authentication is available at `/api/auth/login`. Account and transaction routes
 | Administration | `GET /api/admin/ledger/reconcile/latest`, `POST /api/admin/ledger/reconcile`, account management routes |
 | Health | `GET /actuator/health`, `GET /actuator/health/liveness` |
 
-Visitors can open the public sample endpoint to inspect two synthetic accounts and their sample transaction history without signing in. It is read-only and only included in the Render demo profile. Registration, transfers, and manual ledger adjustments are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
+Visitors can explore two synthetic accounts, 30 days of sample history, and read-only transaction filters in the React dashboard. The dashboard is served separately from the public sample endpoint and needs no login. The API endpoint only returns fixed synthetic data and is available in the Render demo profile. Registration, transfers, and manual ledger adjustments are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
 
 ## Deploy a portfolio demo
 
-The repository includes a Render Blueprint for a small public demo backed by a separate PostgreSQL database. It is intended for synthetic data only and uses free-tier services that may sleep while idle. Follow [RENDER_DEMO.md](RENDER_DEMO.md) for setup and verification steps.
+The repository includes a Render Blueprint for a public React dashboard and demo API backed by a separate PostgreSQL database. It is intended for synthetic data only; the API may sleep while idle. Follow [RENDER_DEMO.md](RENDER_DEMO.md) for setup and verification steps.
 
 Do not put database credentials or signing keys in GitHub, screenshots, or chat. The demo is not intended for personal data or customer funds.
 
@@ -136,6 +149,7 @@ See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for the current status an
 src/main/java/       REST API, services, ledger, security, monitoring
 src/main/resources/  Runtime profiles and Flyway migrations
 src/test/            Automated tests
+frontend/            React, TypeScript, Vite, and Tailwind dashboard
 .github/workflows/   Build, test, and security checks
 render.yaml          Render demo service blueprint
 RENDER_DEMO.md       Demo database and hosting guide
