@@ -36,6 +36,7 @@ The Render platform supplies the API port and public service URL. Keep `VAULTSTR
 After deployment, check:
 
 - `https://YOUR_RENDER_HOST/` shows the read-only VaultStream portfolio page. This is a project overview, not a customer wallet interface.
+- `https://YOUR_RENDER_HOST/api/demo/overview` returns two synthetic accounts and their sample transactions without requiring a login. This route only returns the fixed demo records and supports `GET` only.
 - `https://YOUR_RENDER_HOST/actuator/health/liveness` returns a healthy response.
 - Render logs show Flyway migrations completed before the API started.
 - The database contains only synthetic demo records.

@@ -109,13 +109,14 @@ Authentication is available at `/api/auth/login`. Account and transaction routes
 
 | Area | Example routes |
 |---|---|
+| Public demo | `GET /api/demo/overview` (read-only, synthetic data; available in the Render demo profile) |
 | Authentication | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` |
 | Accounts | `GET /api/accounts`, `GET /api/accounts/{id}`, `GET /api/accounts/{id}/statement`, `POST /api/accounts` |
 | Transactions | `GET /api/transactions/account/{accountId}`, `POST /api/transactions/transfer` |
 | Administration | `GET /api/admin/ledger/reconcile/latest`, `POST /api/admin/ledger/reconcile`, account management routes |
 | Health | `GET /actuator/health`, `GET /actuator/health/liveness` |
 
-Registration, transfers, and manual ledger adjustments are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
+Visitors can open the public sample endpoint to inspect two synthetic accounts and their sample transaction history without signing in. It is read-only and only included in the Render demo profile. Registration, transfers, and manual ledger adjustments are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
 
 ## Deploy a portfolio demo
 
