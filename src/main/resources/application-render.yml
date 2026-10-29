@@ -10,6 +10,10 @@ spring:
       minimum-idle: 0
       idle-timeout: 300000
 
+vaultstream:
+  demo:
+    enabled: true
+
 management:
   endpoint:
     health:

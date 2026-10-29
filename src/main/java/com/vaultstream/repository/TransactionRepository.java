@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Collection;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
@@ -43,6 +44,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> findAllByReferenceId(String referenceId);
 
     Optional<Transaction> findByAccountIdAndReferenceId(UUID accountId, String referenceId);
+
+    List<Transaction> findAllByAccountIdInOrderByTimestampAscIdAsc(Collection<UUID> accountIds);
 
     @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE account_id = :accountId AND type = :type",
             nativeQuery = true)
