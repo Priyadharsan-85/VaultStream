@@ -13,6 +13,8 @@ spring:
 vaultstream:
   demo:
     enabled: true
+  security:
+    allowed-origins: ${VAULTSTREAM_ALLOWED_ORIGINS:${RENDER_EXTERNAL_URL:http://localhost:5173}}
 
 management:
   endpoint:

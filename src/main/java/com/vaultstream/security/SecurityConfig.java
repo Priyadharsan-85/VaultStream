@@ -20,6 +20,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
@@ -46,10 +52,25 @@ public class SecurityConfig {
     }
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${vaultstream.security.allowed-origins:}") String[] allowedOrigins) {
+        CorsConfiguration demoCors = new CorsConfiguration();
+        demoCors.setAllowedOrigins(Arrays.stream(allowedOrigins).filter(origin -> !origin.isBlank()).toList());
+        demoCors.setAllowedMethods(List.of("GET", "OPTIONS"));
+        demoCors.setAllowedHeaders(List.of("Accept", "Content-Type"));
+        demoCors.setAllowCredentials(false);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/demo/**", demoCors);
+        return source;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // API authentication uses an explicit Bearer header, never an automatically sent cookie.
             // Keep CSRF protection enabled for any browser-facing routes outside the stateless API.
+            .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
             .headers(headers -> headers
                 .frameOptions(frame -> frame.deny())

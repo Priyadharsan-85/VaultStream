@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /** Seeds a small, public, synthetic dataset for the Render portfolio demo only. */
@@ -36,7 +38,18 @@ public class DemoDataInitializer implements ApplicationRunner {
     private static final UUID CLEARING_ACCOUNT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final BigDecimal SOURCE_OPENING_BALANCE = new BigDecimal("1250.00");
     private static final BigDecimal DESTINATION_OPENING_BALANCE = new BigDecimal("400.00");
-    private static final BigDecimal SAMPLE_TRANSFER = new BigDecimal("125.00");
+    private static final List<TransferSample> SAMPLE_TRANSFERS = List.of(
+            new TransferSample(22, true, new BigDecimal("125.00")),
+            new TransferSample(20, false, new BigDecimal("45.00")),
+            new TransferSample(18, true, new BigDecimal("80.00")),
+            new TransferSample(16, false, new BigDecimal("70.00")),
+            new TransferSample(14, true, new BigDecimal("155.00")),
+            new TransferSample(12, false, new BigDecimal("30.00")),
+            new TransferSample(10, true, new BigDecimal("90.00")),
+            new TransferSample(8, false, new BigDecimal("110.00")),
+            new TransferSample(6, true, new BigDecimal("200.00")),
+            new TransferSample(4, false, new BigDecimal("65.00")),
+            new TransferSample(2, true, new BigDecimal("55.00")));
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
@@ -64,31 +77,42 @@ public class DemoDataInitializer implements ApplicationRunner {
         accountRepository.saveAll(List.of(source, destination));
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime openingTime = now.minusDays(30);
         createOpeningJournal(source, SOURCE_OPENING_BALANCE, "demo-opening-source");
         createOpeningJournal(destination, DESTINATION_OPENING_BALANCE, "demo-opening-destination");
 
-        source.setBalance(SOURCE_OPENING_BALANCE.subtract(SAMPLE_TRANSFER));
-        destination.setBalance(DESTINATION_OPENING_BALANCE.add(SAMPLE_TRANSFER));
-        accountRepository.saveAll(List.of(source, destination));
-
-        LedgerJournal transferJournal = ledgerJournalRepository.save(LedgerJournal.builder()
-                .transactionType("TRANSFER")
-                .referenceId("demo-transfer-001")
-                .description("Synthetic portfolio demo transfer")
-                .build());
-        ledgerEntryRepository.saveAll(List.of(
-                createEntry(transferJournal.getId(), source.getId(), LedgerEntry.Direction.DEBIT, SAMPLE_TRANSFER),
-                createEntry(transferJournal.getId(), destination.getId(), LedgerEntry.Direction.CREDIT, SAMPLE_TRANSFER)));
-
-        transactionRepository.saveAll(List.of(
+        List<Transaction> transactions = new ArrayList<>(List.of(
                 createTransaction(source, SOURCE_OPENING_BALANCE, Transaction.TransactionType.DEPOSIT,
-                        "demo-opening-source", "Synthetic opening balance", now.minusDays(2)),
+                        "demo-opening-source", "Synthetic opening balance", openingTime),
                 createTransaction(destination, DESTINATION_OPENING_BALANCE, Transaction.TransactionType.DEPOSIT,
-                        "demo-opening-destination", "Synthetic opening balance", now.minusDays(2)),
-                createTransaction(source, SAMPLE_TRANSFER, Transaction.TransactionType.TRANSFER_OUT,
-                        "demo-transfer-001", "Synthetic demo transfer", now.minusDays(1)),
-                createTransaction(destination, SAMPLE_TRANSFER, Transaction.TransactionType.TRANSFER_IN,
-                        "demo-transfer-001", "Synthetic demo transfer", now.minusDays(1))));
+                        "demo-opening-destination", "Synthetic opening balance", openingTime)));
+
+        for (int index = 0; index < SAMPLE_TRANSFERS.size(); index++) {
+            TransferSample sample = SAMPLE_TRANSFERS.get(index);
+            String reference = String.format(Locale.ROOT, "demo-transfer-%03d", index + 1);
+            LocalDateTime timestamp = now.minusDays(sample.daysAgo());
+            Account from = sample.sourceToDestination() ? source : destination;
+            Account to = sample.sourceToDestination() ? destination : source;
+
+            LedgerJournal journal = ledgerJournalRepository.save(LedgerJournal.builder()
+                    .transactionType("TRANSFER")
+                    .referenceId(reference)
+                    .description("Synthetic portfolio demo transfer")
+                    .build());
+            ledgerEntryRepository.saveAll(List.of(
+                    createEntry(journal.getId(), from.getId(), LedgerEntry.Direction.DEBIT, sample.amount()),
+                    createEntry(journal.getId(), to.getId(), LedgerEntry.Direction.CREDIT, sample.amount())));
+
+            from.setBalance(from.getBalance().subtract(sample.amount()));
+            to.setBalance(to.getBalance().add(sample.amount()));
+            transactions.add(createTransaction(from, sample.amount(), Transaction.TransactionType.TRANSFER_OUT,
+                    reference, "Synthetic demo transfer", timestamp));
+            transactions.add(createTransaction(to, sample.amount(), Transaction.TransactionType.TRANSFER_IN,
+                    reference, "Synthetic demo transfer", timestamp));
+        }
+
+        accountRepository.saveAll(List.of(source, destination));
+        transactionRepository.saveAll(transactions);
 
         log.info("Seeded synthetic portfolio demo accounts and balanced sample transactions");
     }
@@ -132,5 +156,8 @@ public class DemoDataInitializer implements ApplicationRunner {
                 .description(description)
                 .timestamp(timestamp)
                 .build();
+    }
+
+    private record TransferSample(int daysAgo, boolean sourceToDestination, BigDecimal amount) {
     }
 }
