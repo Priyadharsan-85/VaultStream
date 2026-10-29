@@ -1,35 +1,32 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { demoOverviewUrl, getDemoOverview } from './api';
 import type { DemoAccount, DemoOverview, DemoTransaction } from './types';
 
-type IconName = 'overview' | 'accounts' | 'activity' | 'ledger' | 'help' | 'arrow' | 'refresh' | 'external' | 'search' | 'filter' | 'chevron' | 'dots' | 'download' | 'clock' | 'shield' | 'wallet' | 'transfer' | 'layers';
+type IconName = 'home' | 'accounts' | 'activity' | 'ledger' | 'arrow' | 'refresh' | 'external' | 'search' | 'download' | 'clock' | 'shield' | 'wallet' | 'transfer' | 'check' | 'close';
 type HistoryPoint = { date: Date; balance: number };
 type Filter = 'all' | 'incoming' | 'outgoing';
 type Period = '7d' | '30d' | 'all';
 
 const iconContent: Record<IconName, ReactNode> = {
-  overview: <><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /></>,
-  accounts: <><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M3 10h18M7 15h4" /></>,
-  activity: <><path d="M4 14h3l2-7 4 11 2-7h5" /><path d="M4 4h16" /></>,
-  ledger: <><path d="M4 5.5 12 2l8 3.5-8 3.5-8-3.5Z" /><path d="m4 12 8 3.5 8-3.5M4 18l8 3.5 8-3.5" /></>,
-  help: <><circle cx="12" cy="12" r="9" /><path d="M9.8 9a2.3 2.3 0 1 1 4.1 1.4c-1 1.1-1.9 1.3-1.9 3M12 17h.01" /></>,
-  arrow: <><path d="M5 12h14M13 6l6 6-6 6" /></>,
+  home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9M9 20v-7h6v7" /></>,
+  accounts: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></>,
+  activity: <><path d="M3 12h4l2-7 4 14 3-9 2 2h3" /></>,
+  ledger: <><path d="M4 5.5 12 2l8 3.5-8 3.5-8-3.5Z" /><path d="m4 12 8 3.5 8-3.5m-16 6 8 3.5 8-3.5" /></>,
+  arrow: <><path d="M4 12h16M13 5l7 7-7 7" /></>,
   refresh: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M5.5 9a7 7 0 0 1 11.6-2.2L20 12M4 12l2.9 5.2A7 7 0 0 0 18.5 15" /></>,
-  external: <><path d="M14 4h6v6M20 4l-9 9" /><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></>,
+  external: <><path d="M14 4h6v6m0-6-9 9" /><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></>,
   search: <><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></>,
-  filter: <><path d="M4 7h16M7 12h10m-7 5h4" /><circle cx="8" cy="7" r="1.5" /><circle cx="15" cy="12" r="1.5" /></>,
-  chevron: <path d="m7 10 5 5 5-5" />,
-  dots: <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
   download: <><path d="M12 3v12m0 0 4-4m-4 4-4-4" /><path d="M5 17v4h14v-4" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   shield: <><path d="M12 3 20 6v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z" /><path d="m9 12 2 2 4-4" /></>,
-  wallet: <><rect x="3" y="5" width="18" height="15" rx="3" /><path d="M3 9h18M16 14h2" /></>,
+  wallet: <><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 9h18m-5 5h2" /></>,
   transfer: <><path d="M4 8h15l-3-3m4 11H5l3 3" /></>,
-  layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5m-18 5 9 5 9-5" /></>,
+  check: <path d="m5 12 4 4L19 6" />,
+  close: <path d="m6 6 12 12M18 6 6 18" />,
 };
 
 function Icon({ name, size = 18, className = '' }: { name: IconName; size?: number; className?: string }) {
-  return <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{iconContent[name]}</svg>;
+  return <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{iconContent[name]}</svg>;
 }
 
 function amountOf(value: number | string): number {
@@ -56,47 +53,84 @@ function buildHistory(account: DemoAccount, transactions: DemoTransaction[]): Hi
     });
 }
 
-function IconBadge({ icon, tone }: { icon: IconName; tone: string }) {
-  return <span className={`icon-badge ${tone}`}><Icon name={icon} size={20} /></span>;
-}
-
-function BalanceChart({ points, accountName }: { points: HistoryPoint[]; accountName: string }) {
-  if (points.length === 0) return <div className="empty-chart">No sample history is available for this account yet.</div>;
-
-  const min = Math.min(...points.map((point) => point.balance));
-  const max = Math.max(...points.map((point) => point.balance));
-  const padding = Math.max((max - min) * 0.18, max * 0.035, 10);
+function BalanceChart({ points, accountName, period, onPeriodChange }: {
+  points: HistoryPoint[];
+  accountName: string;
+  period: Period;
+  onPeriodChange: (period: Period) => void;
+}) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const min = points.length ? Math.min(...points.map((point) => point.balance)) : 0;
+  const max = points.length ? Math.max(...points.map((point) => point.balance)) : 0;
+  const padding = Math.max((max - min) * 0.2, max * 0.045, 12);
   const low = Math.max(0, min - padding);
   const high = max + padding;
-  const width = 920;
-  const height = 230;
-  const xPad = 4;
-  const yPad = 10;
-  const chartWidth = width - xPad * 2;
-  const chartHeight = height - yPad * 2;
+  const width = 900;
+  const height = 245;
+  const top = 13;
+  const bottom = 220;
+  const plotWidth = width - 8;
+  const plotHeight = bottom - top;
   const coords = points.map((point, index) => ({
-    x: xPad + (points.length === 1 ? chartWidth / 2 : index * chartWidth / (points.length - 1)),
-    y: yPad + chartHeight - ((point.balance - low) / (high - low || 1)) * chartHeight,
+    x: 4 + (points.length < 2 ? plotWidth / 2 : index * plotWidth / (points.length - 1)),
+    y: bottom - ((point.balance - low) / (high - low || 1)) * plotHeight,
     point,
   }));
   const linePath = coords.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
-  const areaPath = `${linePath} L ${coords.at(-1)?.x ?? width} ${height} L ${coords[0]?.x ?? 0} ${height} Z`;
-  const labelPoints = [coords[0], coords[Math.floor((coords.length - 1) / 2)], coords.at(-1)]
+  const areaPath = coords.length ? `${linePath} L ${coords.at(-1)?.x ?? width} ${bottom} L ${coords[0]?.x ?? 0} ${bottom} Z` : '';
+  const selectedPoint = hoveredIndex !== null ? coords[hoveredIndex] : coords.at(-1);
+  const labels = [coords[0], coords[Math.floor((coords.length - 1) / 2)], coords.at(-1)]
     .filter((point, index, list): point is NonNullable<typeof point> => Boolean(point) && list.findIndex((item) => item?.x === point?.x) === index);
 
+  function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
+    if (!coords.length) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    setHoveredIndex(Math.round(fraction * (coords.length - 1)));
+  }
+
+  function handleChartKeys(event: KeyboardEvent<SVGSVGElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    setHoveredIndex((current) => {
+      const next = current ?? coords.length - 1;
+      return Math.max(0, Math.min(coords.length - 1, next + (event.key === 'ArrowRight' ? 1 : -1)));
+    });
+  }
+
+  if (!points.length) return <div className="empty-chart">No synthetic history for this account in this range.</div>;
+
   return (
-    <div className="chart-wrap">
-      <div className="chart-axis-labels" aria-hidden="true"><span>{inr.format(high)}</span><span>{inr.format((high + low) / 2)}</span><span>{inr.format(low)}</span></div>
-      <div className="chart-plot">
-        <svg className="balance-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Synthetic balance history for ${accountName}`} preserveAspectRatio="none">
-          <defs><linearGradient id="balance-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#63e0c1" stopOpacity=".28" /><stop offset="100%" stopColor="#63e0c1" stopOpacity="0" /></linearGradient></defs>
-          {[0, 1, 2, 3].map((line) => <line key={line} x1="0" x2={width} y1={yPad + line * chartHeight / 3} y2={yPad + line * chartHeight / 3} className="chart-grid" />)}
-          <path d={areaPath} fill="url(#balance-fill)" />
-          <path d={linePath} className="chart-line" />
-          {coords.map((point) => <circle key={`${point.point.date.toISOString()}-${point.x}`} cx={point.x} cy={point.y} r="3.6" className="chart-point"><title>{`${dateFormat.format(point.point.date)} · ${inr.format(point.point.balance)}`}</title></circle>)}
-        </svg>
-        <div className="chart-dates" aria-hidden="true">{labelPoints.map((point, index) => <span key={`${point.point.date.toISOString()}-${index}`}>{dateFormat.format(point.point.date)}</span>)}</div>
+    <div className="chart-area">
+      <div className="chart-readout" aria-live="polite">
+        <span className="readout-date">{selectedPoint ? dateFormat.format(selectedPoint.point.date) : 'Latest entry'}</span>
+        <strong>{selectedPoint ? inr.format(selectedPoint.point.balance) : inr.format(max)}</strong>
+        <span className="readout-label">{hoveredIndex === null ? 'LATEST BALANCE' : 'HISTORY POINT'}</span>
       </div>
+      <div className="balance-chart-layout">
+        <div className="chart-y-labels" aria-hidden="true"><span>{inr.format(high)}</span><span>{inr.format((high + low) / 2)}</span><span>{inr.format(low)}</span></div>
+        <svg
+          className="balance-chart"
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={`Interactive synthetic balance history for ${accountName}. Use left and right arrow keys to inspect dates.`}
+          preserveAspectRatio="none"
+          onPointerMove={handlePointerMove}
+          onPointerLeave={() => setHoveredIndex(null)}
+          onKeyDown={handleChartKeys}
+          tabIndex={0}
+        >
+          <defs>
+            <linearGradient id="chart-paper" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#c45d3d" stopOpacity=".25" /><stop offset="100%" stopColor="#c45d3d" stopOpacity="0" /></linearGradient>
+          </defs>
+          {[0, 1, 2, 3].map((line) => <line key={line} x1="0" x2={width} y1={top + line * plotHeight / 3} y2={top + line * plotHeight / 3} className="chart-grid" />)}
+          {selectedPoint && <line x1={selectedPoint.x} x2={selectedPoint.x} y1={top} y2={bottom} className="chart-crosshair" />}
+          <path d={areaPath} fill="url(#chart-paper)" />
+          <path d={linePath} className="chart-line" />
+          {coords.map((point, index) => <circle key={`${point.point.date.toISOString()}-${index}`} cx={point.x} cy={point.y} r={index === hoveredIndex ? '6' : '3.2'} className={`chart-point ${index === hoveredIndex ? 'point-active' : ''}`}><title>{`${dateFormat.format(point.point.date)} — ${inr.format(point.point.balance)}`}</title></circle>)}
+        </svg>
+      </div>
+      <div className="chart-bottomline"><div className="chart-dates">{labels.map((point, index) => <span key={`${point.point.date.toISOString()}-${index}`}>{dateFormat.format(point.point.date)}</span>)}</div><div className="period-tabs" role="group" aria-label="Balance history period">{(['7d', '30d', 'all'] as const).map((value) => <button key={value} className={period === value ? 'selected' : ''} onClick={() => onPeriodChange(value)}>{value === 'all' ? 'Since opening' : value.toUpperCase()}</button>)}</div></div>
     </div>
   );
 }
@@ -105,6 +139,28 @@ function TransactionType({ transaction }: { transaction: DemoTransaction }) {
   const incoming = isIncoming(transaction.type);
   const label = transaction.type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
   return <span className={`transaction-type ${incoming ? 'type-in' : 'type-out'}`}><span />{label}</span>;
+}
+
+function exportCsv(transactions: DemoTransaction[], account: DemoAccount) {
+  const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
+  const lines = [
+    ['Date', 'Account', 'Type', 'Reference', 'Description', 'Amount INR'],
+    ...transactions.map((transaction) => [
+      transaction.timestamp,
+      account.accountNumber,
+      transaction.type,
+      transaction.referenceId ?? '',
+      transaction.description ?? '',
+      amountOf(transaction.amount).toFixed(2),
+    ]),
+  ];
+  const file = new Blob([lines.map((line) => line.map(escape).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${account.accountNumber.toLowerCase()}-synthetic-ledger.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function App() {
@@ -116,7 +172,8 @@ function App() {
   const [period, setPeriod] = useState<Period>('30d');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  const [showAll, setShowAll] = useState(false);
+  const [expandedTransactionId, setExpandedTransactionId] = useState('');
+  const [activeNav, setActiveNav] = useState('overview');
 
   async function loadDemo(signal?: AbortSignal) {
     setError('');
@@ -126,7 +183,7 @@ function App() {
       setSelectedAccountId((current) => result.accounts.some((account) => account.id === current) ? current : result.accounts[0]?.id ?? '');
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === 'AbortError') return;
-      setError(reason instanceof Error ? reason.message : 'Could not load demo data. Try again in a moment.');
+      setError(reason instanceof Error ? reason.message : 'Could not load the synthetic ledger. Try again in a moment.');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -144,8 +201,7 @@ function App() {
     .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)) ?? [], [overview, selectedAccount]);
   const periodTransactions = useMemo(() => {
     if (period === 'all') return accountTransactions;
-    const days = period === '7d' ? 7 : 30;
-    const threshold = Date.now() - days * 24 * 60 * 60 * 1000;
+    const threshold = Date.now() - (period === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000;
     return accountTransactions.filter((transaction) => Date.parse(transaction.timestamp) >= threshold);
   }, [accountTransactions, period]);
   const displayedTransactions = useMemo(() => {
@@ -178,89 +234,119 @@ function App() {
     setRefreshing(false);
   }
 
-  function scrollTo(id: string) {
+  function jumpTo(id: string) {
+    setActiveNav(id);
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   return (
-    <div className="app-shell">
+    <div className="studio-shell">
       <aside className="sidebar">
-        <a className="brand" href="#top" aria-label="VaultStream dashboard home"><span className="brand-icon">V</span><span>vault<span>stream</span></span></a>
-        <div className="workspace-switch"><span className="workspace-avatar">VS</span><span className="workspace-copy"><strong>Portfolio demo</strong><small>Sandbox workspace</small></span><Icon name="chevron" size={15} className="workspace-chevron" /></div>
-        <p className="nav-label">WORKSPACE</p>
+        <a className="brand" href="#overview" aria-label="VaultStream ledger home"><span className="brand-mark"><i /><i /><i /></span><span>VAULT<span>STREAM</span></span></a>
+        <div className="sidebar-edition"><span>FIELD NOTES</span><span>NO. 001 / 2026</span></div>
+        <div className="workspace-switch"><span className="workspace-stamp">VS</span><span><strong>Open sandbox</strong><small>Public reading room</small></span><span className="workspace-caret">↘</span></div>
+        <p className="nav-label">THE LEDGER</p>
         <nav className="side-nav" aria-label="Dashboard sections">
-          <button className="nav-item active" onClick={() => scrollTo('overview')}><Icon name="overview" /><span>Overview</span><span className="nav-indicator" /></button>
-          <button className="nav-item" onClick={() => scrollTo('accounts')}><Icon name="accounts" /><span>Accounts</span><span className="nav-count">{overview?.accounts.length ?? '—'}</span></button>
-          <button className="nav-item" onClick={() => scrollTo('activity')}><Icon name="activity" /><span>Activity</span></button>
-          <button className="nav-item" onClick={() => scrollTo('ledger-health')}><Icon name="ledger" /><span>Ledger health</span></button>
+          <button className={`nav-item ${activeNav === 'overview' ? 'active' : ''}`} onClick={() => jumpTo('overview')}><Icon name="home" size={17} /><span>Overview</span><b>01</b></button>
+          <button className={`nav-item ${activeNav === 'accounts' ? 'active' : ''}`} onClick={() => jumpTo('accounts')}><Icon name="accounts" size={17} /><span>Accounts</span><b>{String(overview?.accounts.length ?? 0).padStart(2, '0')}</b></button>
+          <button className={`nav-item ${activeNav === 'activity' ? 'active' : ''}`} onClick={() => jumpTo('activity')}><Icon name="activity" size={17} /><span>Entries</span><b>↗</b></button>
         </nav>
+        <div className="sidebar-aside"><span className="aside-rule" /><p>Every movement<br />has a counter-entry.</p><span className="aside-index">DEBIT<br />CREDIT</span></div>
         <div className="sidebar-bottom">
-          <div className="sandbox-card"><div className="sandbox-icon"><Icon name="shield" size={17} /></div><div><strong>Safe sandbox</strong><p>Fictional data only.<br />No payments are processed.</p></div><span className="sandbox-dot" /></div>
-          <a className="github-link" href="https://github.com/Priyadharsan-85/VaultStream" target="_blank" rel="noreferrer"><span className="github-mark">⌘</span><span>Project on GitHub</span><Icon name="external" size={14} /></a>
-          <div className="sidebar-foot"><span>VaultStream API</span><span>v1.0 · Demo</span></div>
+          <div className="sandbox-seal"><span className="seal-icon"><Icon name="shield" size={15} /></span><span><strong>SIMULATION ONLY</strong><small>Nothing here moves money.</small></span></div>
+          <a className="github-link" href="https://github.com/Priyadharsan-85/VaultStream" target="_blank" rel="noreferrer"><span>Project source</span><Icon name="external" size={13} /></a>
+          <div className="sidebar-footer"><span>VAULTSTREAM / API</span><span>V.01</span></div>
         </div>
       </aside>
 
-      <main className="main-content" id="top">
+      <main className="main-content">
         <header className="topbar">
-          <div className="breadcrumbs"><span>Portfolio</span><span className="breadcrumb-slash">/</span><strong>Overview</strong></div>
-          <div className="topbar-actions"><span className="demo-badge"><span /> DEMO ENVIRONMENT</span><button className={`icon-button refresh-button ${refreshing ? 'is-refreshing' : ''}`} onClick={() => void handleRefresh()} aria-label="Refresh demo data" title="Refresh demo data"><Icon name="refresh" size={17} /></button><div className="profile-chip"><span className="profile-avatar">D</span><span className="profile-name">Demo visitor</span><Icon name="chevron" size={14} /></div></div>
+          <div className="breadcrumbs"><span>VAULTSTREAM</span><span className="crumb-mark">/</span><strong>PUBLIC DEMO</strong></div>
+          <div className="topbar-actions"><span className="folio-date">FOLIO 29—10—26</span><span className="demo-badge"><i /> SYNTHETIC DATA</span><button className={`icon-button refresh-button ${refreshing ? 'is-refreshing' : ''}`} onClick={() => void handleRefresh()} aria-label="Refresh sample data" title="Refresh sample data"><Icon name="refresh" size={16} /></button></div>
         </header>
 
-        <div className="page-container" id="overview">
-          <section className="page-heading">
-            <div><div className="overline"><span className="overline-mark" /> LEDGER OVERVIEW <span className="overline-slash">/</span> SYNTHETIC DATA</div><h1>Good day, <span>explorer.</span></h1><p>See how a balanced ledger comes together, one entry at a time.</p></div>
-            <a className="api-link" href={demoOverviewUrl} target="_blank" rel="noreferrer"><Icon name="layers" size={16} /> View API response <Icon name="external" size={14} /></a>
+        <div className="page-container">
+          <section className="hero" id="overview">
+            <div className="hero-copy"><div className="hero-overline"><span>01</span><i /> PUBLIC LEDGER STUDY</div><h1>Money,<br /><em>made legible.</em></h1><p className="hero-subtitle">A small, inspectable ledger. Follow every balance back to the entries that shaped it.</p><div className="hero-meta"><span><Icon name="clock" size={14} /> 30-day sample window</span><span><i /> Read-only sandbox</span></div></div>
+            <div className="hero-ledger" aria-label="Illustration of a balanced double-entry transfer"><div className="ledger-stamp">POSTED<br />DEMO</div><div className="hero-ledger-heading"><span>JOURNAL / ENTRY 011</span><span>INR · 01</span></div><div className="journal-line"><span className="journal-marker debit-marker">DR</span><span className="journal-label"><strong>Source account</strong><small>TRANSFER OUT</small></span><span className="journal-value">₹ 55.00</span></div><div className="journal-line"><span className="journal-marker credit-marker">CR</span><span className="journal-label"><strong>Destination account</strong><small>TRANSFER IN</small></span><span className="journal-value">₹ 55.00</span></div><div className="journal-balance"><span>Journal difference</span><strong>₹ 0.00 <Icon name="check" size={14} /></strong></div><div className="ledger-scribble">equal &amp; opposite</div></div>
+            <div className="hero-side-note"><span className="side-note-line" />FIELD STUDY<br />FICTIONAL RECORDS</div>
           </section>
 
-          {overview?.notice && <div className="notice-banner"><Icon name="shield" size={17} /><span><strong>Demo data only</strong> {overview.notice}</span></div>}
-          {error && <div className="error-banner" role="alert"><span><strong>Could not reach the demo API.</strong> {error}</span><button onClick={() => void handleRefresh()}>Try again</button></div>}
+          {overview?.notice && <div className="notice-banner"><Icon name="shield" size={16} /><span><strong>Simulation notice</strong> {overview.notice}</span></div>}
+          {error && <div className="error-banner" role="alert"><span><strong>Demo service is taking a pause.</strong> {error}</span><button onClick={() => void handleRefresh()}>Retry <Icon name="arrow" size={13} /></button></div>}
 
-          <section className="metric-grid" aria-label="Demo summary">
-            <article className="metric-card balance-metric"><div className="metric-top"><span>Total demo balance</span><IconBadge icon="wallet" tone="tone-teal" /></div><strong className="metric-value">{loading ? <span className="skeleton skeleton-number" /> : inr.format(totalBalance)}</strong><div className="metric-foot"><span className="metric-sparkline">↗</span><span>Across all sample accounts</span><span className="metric-chip">SYNTHETIC</span></div></article>
-            <article className="metric-card"><div className="metric-top"><span>Sample accounts</span><IconBadge icon="accounts" tone="tone-violet" /></div><strong className="metric-value">{loading ? <span className="skeleton skeleton-number" /> : overview?.accounts.length ?? '—'}</strong><div className="metric-foot"><span className="metric-dot dot-violet" /> <span>Isolated demo records</span></div></article>
-            <article className="metric-card"><div className="metric-top"><span>Sample entries</span><IconBadge icon="transfer" tone="tone-blue" /></div><strong className="metric-value">{loading ? <span className="skeleton skeleton-number" /> : overview?.transactions.length ?? '—'}</strong><div className="metric-foot"><span className="metric-dot dot-blue" /> <span>Paired ledger activity</span></div></article>
-            <article className="metric-card" id="ledger-health"><div className="metric-top"><span>Balance check</span><IconBadge icon="shield" tone="tone-green" /></div><strong className={`metric-value health-value ${loading ? '' : ledgerBalanced ? 'healthy' : 'unhealthy'}`}>{loading ? <span className="skeleton skeleton-number" /> : ledgerBalanced ? 'In balance' : 'Review'}</strong><div className="metric-foot"><span className={`metric-dot ${loading ? 'dot-muted' : ledgerBalanced ? 'dot-green' : 'dot-amber'}`} /> <span>Account totals match history</span></div></article>
+          <section className="measure-strip" aria-label="Sample ledger summary">
+            <article className="measure measure-total"><span className="measure-label">TOTAL SAMPLE BALANCE <i>01</i></span><strong>{loading ? <span className="skeleton skeleton-wide" /> : inr.format(totalBalance)}</strong><small>Across the two demo accounts</small></article>
+            <article className="measure"><span className="measure-label">ACCOUNTS <i>02</i></span><strong>{loading ? '—' : String(overview?.accounts.length ?? 0).padStart(2, '0')}</strong><small>Closed synthetic set</small></article>
+            <article className="measure"><span className="measure-label">POSTINGS <i>03</i></span><strong>{loading ? '—' : String(overview?.transactions.length ?? 0).padStart(2, '0')}</strong><small>Paired entries · 30 days</small></article>
+            <article className="measure measure-status"><span className="measure-label">BALANCE TEST <i>04</i></span><strong className={loading ? '' : ledgerBalanced ? 'status-good' : 'status-review'}>{loading ? '—' : ledgerBalanced ? 'Passed' : 'Review'}</strong><small><span className={`status-dot ${loading ? 'dot-wait' : ledgerBalanced ? 'dot-good' : 'dot-review'}`} /> Account totals trace to history</small></article>
           </section>
 
-          <section className="content-grid">
-            <article className="panel chart-panel">
-              <div className="panel-heading chart-heading"><div><div className="panel-kicker">ACCOUNT PERFORMANCE</div><h2>Balance history</h2></div><div className="chart-controls"><label className="account-select-wrap"><span className="sr-only">Choose an account</span><select value={selectedAccount?.id ?? ''} onChange={(event) => setSelectedAccountId(event.target.value)} disabled={!overview?.accounts.length}><option value="" disabled>Select account</option>{overview?.accounts.map((account) => <option key={account.id} value={account.id}>{account.accountHolderName}</option>)}</select><Icon name="chevron" size={14} /></label><div className="period-tabs" role="group" aria-label="Balance history period">{(['7d', '30d', 'all'] as const).map((value) => <button key={value} className={period === value ? 'selected' : ''} onClick={() => setPeriod(value)}>{value === 'all' ? 'All' : value.toUpperCase()}</button>)}</div></div></div>
-              <div className="chart-summary"><span className="chart-current">{loading || !selectedAccount ? <span className="skeleton skeleton-number" /> : inr.format(amountOf(selectedAccount.balance))}</span><span className="chart-account-label">Current synthetic balance</span></div>
-              {loading ? <div className="chart-loading"><span /><span /><span /></div> : <BalanceChart points={chartPoints} accountName={selectedAccount?.accountHolderName ?? 'demo account'} />}
-              <div className="chart-legend"><span className="legend-line" /> Balance <span className="chart-legend-note">Sample history from the demo API</span></div>
+          <section className="ledger-layout">
+            <article className="paper-panel chart-panel" id="accounts">
+              <div className="section-head"><div><span className="section-number">A / 01</span><h2>Balance, over time</h2><p>Select a record; inspect its running balance.</p></div><label className="account-selector"><span className="sr-only">Select a sample account</span><select value={selectedAccount?.id ?? ''} onChange={(event) => setSelectedAccountId(event.target.value)} disabled={!overview?.accounts.length}><option value="" disabled>Choose account</option>{overview?.accounts.map((account) => <option key={account.id} value={account.id}>{account.accountHolderName}</option>)}</select><span aria-hidden="true">⌄</span></label></div>
+              <div className="chart-header-readout"><div><span className="readout-caption">{selectedAccount?.accountHolderName ?? 'Selected account'}</span><strong>{loading || !selectedAccount ? <span className="skeleton skeleton-wide" /> : inr.format(amountOf(selectedAccount.balance))}</strong></div><span className="readout-current"><i /> CURRENT BALANCE</span></div>
+              {loading ? <div className="chart-loading"><span /><span /><span /></div> : <BalanceChart points={chartPoints} accountName={selectedAccount?.accountHolderName ?? 'demo account'} period={period} onPeriodChange={setPeriod} />}
+              <div className="chart-footnote"><span><i /> BALANCE TRACE</span><span>Hover or focus the plot to inspect entries</span></div>
             </article>
 
-            <article className="panel accounts-panel" id="accounts">
-              <div className="panel-heading"><div><div className="panel-kicker">YOUR DEMO SPACE</div><h2>Accounts</h2></div><span className="count-pill">{loading ? '—' : `${overview?.accounts.length ?? 0} total`}</span></div>
-              <div className="account-list">
-                {loading ? <><div className="account-skeleton" /><div className="account-skeleton" /></> : overview?.accounts.map((account, index) => <button key={account.id} className={`account-card ${selectedAccount?.id === account.id ? 'account-selected' : ''}`} onClick={() => setSelectedAccountId(account.id)}>
-                  <div className={`account-avatar account-avatar-${index % 2}`}>{account.accountHolderName.split(' ').map((part) => part[0]).join('').slice(0, 2)}</div>
-                  <div className="account-copy"><strong>{account.accountHolderName}</strong><span>•••• {account.accountNumber.slice(-4)}</span><em><span /> {account.status.toLowerCase().replace('_', ' ')}</em></div>
-                  <div className="account-balance"><strong>{inr.format(amountOf(account.balance))}</strong><span>INR</span></div>
-                  <Icon name="arrow" size={15} className="account-arrow" />
-                </button>)}</div>
-              <div className="account-footnote"><Icon name="shield" size={14} /> Fictional balances · Read-only demo</div>
+            <article className="account-panel" aria-labelledby="accounts-title">
+              <div className="account-panel-heading"><div><span className="section-number">A / 02</span><h2 id="accounts-title">The accounts</h2></div><span className="account-count">{loading ? '—' : `${overview?.accounts.length ?? 0} RECORDS`}</span></div>
+              <p className="account-intro">Two fictional ledgers. Click one to trace its balance.</p>
+              <div className="account-stack">{loading ? <><div className="account-skeleton" /><div className="account-skeleton" /></> : overview?.accounts.map((account, index) => <AccountCard key={account.id} account={account} index={index} selected={selectedAccount?.id === account.id} onSelect={() => setSelectedAccountId(account.id)} />)}</div>
+              <div className="account-panel-foot"><span>NO REAL CUSTOMERS</span><span>EST. 2026</span></div>
             </article>
           </section>
 
-          <section className="panel activity-panel" id="activity">
-            <div className="panel-heading activity-heading"><div><div className="panel-kicker">LEDGER EXPLORER</div><h2>Recent activity</h2><p>Entries for {selectedAccount?.accountHolderName ?? 'the selected account'}.</p></div><div className="activity-tools"><label className="search-field"><Icon name="search" size={15} /><span className="sr-only">Search activity</span><input value={search} onChange={(event) => { setSearch(event.target.value); setShowAll(false); }} placeholder="Search reference or type" /></label><button className="filter-button" onClick={() => setFilter((current) => current === 'all' ? 'incoming' : current === 'incoming' ? 'outgoing' : 'all')} title="Cycle activity filter"><Icon name="filter" size={15} /><span>{filter === 'all' ? 'Filter' : filter === 'incoming' ? 'Money in' : 'Money out'}</span></button></div></div>
-            <div className="table-scroll"><table><thead><tr><th>TRANSACTION</th><th>REFERENCE</th><th>DATE &amp; TIME</th><th>TYPE</th><th className="amount-cell">AMOUNT</th></tr></thead><tbody>
-              {loading ? <tr><td colSpan={5} className="table-state">Loading synthetic activity…</td></tr> : displayedTransactions.length === 0 ? <tr><td colSpan={5} className="table-state">No matching sample transactions.</td></tr> : displayedTransactions.slice(0, showAll ? undefined : 8).map((transaction) => {
+          <section className="paper-panel activity-panel" id="activity">
+            <div className="activity-topline"><div><span className="section-number">B / 01</span><h2>Entries &amp; movements</h2><p>One account at a time. Every row belongs to the selected synthetic ledger.</p></div><div className="activity-actions"><a className="raw-link" href={demoOverviewUrl} target="_blank" rel="noreferrer">Raw API <Icon name="external" size={13} /></a><button className="export-button" disabled={!selectedAccount || !displayedTransactions.length} onClick={() => selectedAccount && exportCsv(displayedTransactions, selectedAccount)}><Icon name="download" size={14} /> Export CSV</button></div></div>
+            <div className="table-toolbar"><div className="filter-tabs" role="group" aria-label="Filter ledger entries">{([['all', 'Everything'], ['incoming', 'Inflow'], ['outgoing', 'Outflow']] as const).map(([value, label]) => <button key={value} className={filter === value ? 'selected' : ''} onClick={() => { setFilter(value); setExpandedTransactionId(''); }}>{label}<small>{value === 'all' ? periodTransactions.length : periodTransactions.filter((transaction) => value === 'incoming' ? isIncoming(transaction.type) : !isIncoming(transaction.type)).length}</small></button>)}</div><label className="search-field"><Icon name="search" size={15} /><span className="sr-only">Search synthetic entries</span><input value={search} onChange={(event) => { setSearch(event.target.value); setExpandedTransactionId(''); }} placeholder="Find a reference" /><kbd>/</kbd></label></div>
+            <div className="table-scroll"><table><thead><tr><th>ENTRY</th><th>REFERENCE</th><th>DATE</th><th>CLASSIFICATION</th><th className="amount-cell">AMOUNT</th><th className="expand-column"><span className="sr-only">Open details</span></th></tr></thead><tbody>
+              {loading ? <tr><td colSpan={6} className="table-state">Opening the sample ledger…</td></tr> : displayedTransactions.length === 0 ? <tr><td colSpan={6} className="table-state">No entries match this view.</td></tr> : displayedTransactions.map((transaction, index) => {
                 const incoming = isIncoming(transaction.type);
-                return <tr key={transaction.id}><td><div className="transaction-name"><span className={`transaction-icon ${incoming ? 'transaction-icon-in' : 'transaction-icon-out'}`}><Icon name={incoming ? 'arrow' : 'transfer'} size={15} /></span><span><strong>{transaction.description ?? transaction.type.replaceAll('_', ' ')}</strong><small>{transaction.accountId === selectedAccount?.id ? selectedAccount.accountNumber : 'Synthetic record'}</small></span></div></td><td><code className="reference-code">{transaction.referenceId ?? '—'}</code></td><td><span className="date-cell">{timeFormat.format(new Date(transaction.timestamp))}</span></td><td><TransactionType transaction={transaction} /></td><td className={`amount-cell transaction-amount ${incoming ? 'amount-in' : 'amount-out'}`}>{incoming ? '+' : '−'}{inr.format(amountOf(transaction.amount))}</td></tr>;
+                const expanded = expandedTransactionId === transaction.id;
+                return <FragmentRow key={transaction.id} transaction={transaction} index={index} incoming={incoming} expanded={expanded} account={selectedAccount} onToggle={() => setExpandedTransactionId(expanded ? '' : transaction.id)} />;
               })}
             </tbody></table></div>
-            {!loading && displayedTransactions.length > 8 && <button className="view-all-button" onClick={() => setShowAll((value) => !value)}>{showAll ? 'Show fewer entries' : `Show all ${displayedTransactions.length} entries`} <Icon name="arrow" size={14} /></button>}
-            <div className="table-footer"><span><Icon name="clock" size={14} /> Demo history is fixed synthetic data</span><span>Amounts shown in INR</span></div>
+            <div className="activity-footer"><span><Icon name="shield" size={13} /> Synthetic ledger · read-only</span><span>Showing {displayedTransactions.length} {displayedTransactions.length === 1 ? 'entry' : 'entries'}</span></div>
           </section>
 
-          <footer className="page-footer"><span>VaultStream portfolio demo <span className="footer-separator">·</span> Synthetic data only</span><a href={demoOverviewUrl} target="_blank" rel="noreferrer">Read-only API <Icon name="external" size={13} /></a></footer>
+          <footer className="page-footer"><span>VAULTSTREAM <i>×</i> PUBLIC LEDGER STUDY</span><span>Built for learning · Not a financial service</span><a href="https://github.com/Priyadharsan-85/VaultStream" target="_blank" rel="noreferrer">SOURCE CODE <Icon name="external" size={12} /></a></footer>
         </div>
       </main>
     </div>
   );
+}
+
+function AccountCard({ account, index, selected, onSelect }: { account: DemoAccount; index: number; selected: boolean; onSelect: () => void }) {
+  return <button className={`account-card account-card-${index % 2} ${selected ? 'account-selected' : ''}`} onClick={onSelect} aria-pressed={selected}>
+    <div className="account-card-top"><span>{index === 0 ? 'SOURCE LEDGER' : 'DESTINATION LEDGER'}</span><span className="account-status"><i /> ACTIVE</span></div>
+    <div className="account-card-mid"><span className="account-monogram">0{index + 1}</span><span className="account-holder">{account.accountHolderName}</span><Icon name="arrow" size={16} className="account-arrow" /></div>
+    <div className="account-card-bottom"><span>•••• {account.accountNumber.slice(-4)}</span><strong>{inr.format(amountOf(account.balance))}</strong></div>
+    <span className="account-card-sheen" aria-hidden="true" />
+  </button>;
+}
+
+function FragmentRow({ transaction, index, incoming, expanded, account, onToggle }: {
+  transaction: DemoTransaction;
+  index: number;
+  incoming: boolean;
+  expanded: boolean;
+  account?: DemoAccount;
+  onToggle: () => void;
+}) {
+  const typeLabel = transaction.type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return <>
+    <tr className={`activity-row ${expanded ? 'row-expanded' : ''}`}>
+      <td><button className="transaction-button" onClick={onToggle} aria-expanded={expanded}><span className={`row-index ${incoming ? 'index-in' : 'index-out'}`}>{String(index + 1).padStart(2, '0')}</span><span><strong>{transaction.description ?? typeLabel}</strong><small>{account?.accountHolderName ?? 'Synthetic account'}</small></span></button></td>
+      <td><code className="reference-code">{transaction.referenceId ?? '—'}</code></td>
+      <td><span className="date-cell">{timeFormat.format(new Date(transaction.timestamp))}</span></td>
+      <td><TransactionType transaction={transaction} /></td>
+      <td className={`amount-cell transaction-amount ${incoming ? 'amount-in' : 'amount-out'}`}>{incoming ? '+' : '−'}{inr.format(amountOf(transaction.amount))}</td>
+      <td className="expand-cell"><button className={`row-expand ${expanded ? 'expanded' : ''}`} onClick={onToggle} aria-label={expanded ? 'Hide entry details' : 'Show entry details'}><span>+</span></button></td>
+    </tr>
+    {expanded && <tr className="detail-row"><td colSpan={6}><div className="entry-detail"><div><span>JOURNAL REFERENCE</span><strong>{transaction.referenceId ?? 'No reference'}</strong></div><div><span>POSTED AT</span><strong>{dateFormat.format(new Date(transaction.timestamp))} · {new Date(transaction.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</strong></div><div><span>ENTRY AMOUNT</span><strong>{inr.format(amountOf(transaction.amount))}</strong></div><div className="detail-balance"><span>RECORD TYPE</span><strong>{typeLabel}</strong></div></div></td></tr>}
+  </>;
 }
 
 export default App;
