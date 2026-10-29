@@ -26,7 +26,7 @@
 | | |
 |---|---|
 | **What it demonstrates** | Double-entry ledger patterns, transactional APIs, JWT authentication, idempotency, reconciliation, and monitoring |
-| **Application type** | Backend REST API with a read-only portfolio landing page; no customer wallet interface |
+| **Application type** | Backend REST API; no HTML frontend or customer wallet interface |
 | **Demo data** | Use synthetic accounts and transactions only |
 | **Stack** | Java 17 · Spring Boot · PostgreSQL · Flyway · Docker |
 | **Quality checks** | Maven verification, container build and image scan, CodeQL, dependency review |
