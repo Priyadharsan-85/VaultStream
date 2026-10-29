@@ -35,9 +35,12 @@ The Render platform supplies the API port and public service URL. Keep `VAULTSTR
 
 After deployment, check:
 
+- `https://YOUR_RENDER_HOST/` shows the read-only VaultStream portfolio page. This is a project overview, not a customer wallet interface.
 - `https://YOUR_RENDER_HOST/actuator/health/liveness` returns a healthy response.
 - Render logs show Flyway migrations completed before the API started.
 - The database contains only synthetic demo records.
 - No customer transfers, deposits, withdrawals, or real payment integrations are enabled.
+
+For a portfolio link, share the service root URL (`https://YOUR_RENDER_HOST/`). Keep administrator credentials private and do not publish a demo login or seed any real personal information.
 
 Render's free service can sleep when idle and has limited compute. This is suitable only for a hobby demo; it provides no production availability guarantee. Keep backups of anything you need because this setup does not configure backups for the Neon free database.
