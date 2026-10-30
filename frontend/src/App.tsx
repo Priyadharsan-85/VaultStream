@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { demoOverviewUrl, getDemoOverview } from './api';
 import type { DemoAccount, DemoOverview, DemoTransaction } from './types';
 
@@ -6,6 +6,45 @@ type IconName = 'home' | 'accounts' | 'activity' | 'ledger' | 'arrow' | 'refresh
 type HistoryPoint = { date: Date; balance: number };
 type Filter = 'all' | 'incoming' | 'outgoing';
 type Period = '7d' | '30d' | 'all';
+type SandboxChanges = { additions: DemoTransaction[]; edits: Record<string, DemoTransaction>; removed: string[] };
+
+const sandboxStorageKey = 'vaultstream.public-demo.sandbox.v1';
+const emptySandbox: SandboxChanges = { additions: [], edits: {}, removed: [] };
+
+function readSandboxChanges(): SandboxChanges {
+  if (typeof window === 'undefined') return emptySandbox;
+  try {
+    const saved = sessionStorage.getItem(sandboxStorageKey);
+    if (!saved) return emptySandbox;
+    const parsed = JSON.parse(saved) as Partial<SandboxChanges>;
+    return {
+      additions: Array.isArray(parsed.additions) ? parsed.additions : [],
+      edits: parsed.edits && typeof parsed.edits === 'object' ? parsed.edits : {},
+      removed: Array.isArray(parsed.removed) ? parsed.removed : [],
+    };
+  } catch {
+    return emptySandbox;
+  }
+}
+
+function applySandboxChanges(overview: DemoOverview, changes: SandboxChanges): DemoOverview {
+  const removed = new Set(changes.removed);
+  const transactions = [
+    ...overview.transactions.filter((transaction) => !removed.has(transaction.id)).map((transaction) => changes.edits[transaction.id] ?? transaction),
+    ...changes.additions,
+  ];
+  const accounts = overview.accounts.map((account) => {
+    const balance = transactions
+      .filter((transaction) => transaction.accountId === account.id)
+      .reduce((total, transaction) => total + (isIncoming(transaction.type) ? amountOf(transaction.amount) : -amountOf(transaction.amount)), 0);
+    return { ...account, balance };
+  });
+  return { ...overview, accounts, transactions };
+}
+
+function localDateTimeValue(date: Date): string {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
 
 const iconContent: Record<IconName, ReactNode> = {
   home: <><path d="m3 10 9-7 9 7" /><path d="M5 9v11h14V9M9 20v-7h6v7" /></>,
@@ -141,6 +180,50 @@ function TransactionType({ transaction }: { transaction: DemoTransaction }) {
   return <span className={`transaction-type ${incoming ? 'type-in' : 'type-out'}`}><span />{label}</span>;
 }
 
+function SandboxEntryDialog({ account, transaction, onClose, onSave }: {
+  account: DemoAccount;
+  transaction?: DemoTransaction;
+  onClose: () => void;
+  onSave: (entry: Omit<DemoTransaction, 'id'>, existingId?: string) => void;
+}) {
+  const [description, setDescription] = useState(transaction?.description ?? '');
+  const [amount, setAmount] = useState(transaction ? String(amountOf(transaction.amount)) : '');
+  const [type, setType] = useState<DemoTransaction['type']>(transaction?.type ?? 'DEPOSIT');
+  const [timestamp, setTimestamp] = useState(localDateTimeValue(transaction ? new Date(transaction.timestamp) : new Date()));
+  const [reference, setReference] = useState(transaction?.referenceId ?? '');
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSave({
+      accountId: account.id,
+      amount: Number(amount).toFixed(2),
+      type,
+      timestamp: new Date(timestamp).toISOString(),
+      description: description.trim(),
+      referenceId: reference.trim() || `TRY-${Date.now().toString(36).toUpperCase()}`,
+    }, transaction?.id);
+  }
+
+  return <div className="sandbox-dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="sandbox-dialog" role="dialog" aria-modal="true" aria-labelledby="sandbox-dialog-title">
+      <div className="sandbox-dialog-head"><div><span className="section-number">VISITOR SANDBOX</span><h2 id="sandbox-dialog-title">{transaction ? 'Edit this entry' : 'Add a test entry'}</h2><p>Fictional only. This change stays in your current browser tab.</p></div><button className="dialog-close" onClick={onClose} aria-label="Close entry form">×</button></div>
+      <form onSubmit={submit}>
+        <label className="sandbox-field"><span>ACCOUNT</span><input value={account.accountHolderName} readOnly /></label>
+        <div className="sandbox-field-row">
+          <label className="sandbox-field"><span>ENTRY TYPE</span><select value={type} onChange={(event) => setType(event.target.value as DemoTransaction['type'])}><option value="DEPOSIT">Deposit</option><option value="WITHDRAWAL">Withdrawal</option><option value="TRANSFER_IN">Transfer in</option><option value="TRANSFER_OUT">Transfer out</option><option value="FEE">Fee</option><option value="INTEREST">Interest</option></select></label>
+          <label className="sandbox-field"><span>AMOUNT · INR</span><input type="number" min="0.01" max="10000000" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} required placeholder="250.00" /></label>
+        </div>
+        <label className="sandbox-field"><span>DESCRIPTION</span><input value={description} onChange={(event) => setDescription(event.target.value)} required maxLength={80} placeholder="For example, test deposit" /></label>
+        <div className="sandbox-field-row">
+          <label className="sandbox-field"><span>DATE &amp; TIME</span><input type="datetime-local" value={timestamp} onChange={(event) => setTimestamp(event.target.value)} required /></label>
+          <label className="sandbox-field"><span>REFERENCE <i>OPTIONAL</i></span><input value={reference} onChange={(event) => setReference(event.target.value)} maxLength={40} placeholder="Auto-generated if blank" /></label>
+        </div>
+        <div className="sandbox-dialog-actions"><button type="button" className="dialog-cancel" onClick={onClose}>Cancel</button><button type="submit" className="dialog-save">{transaction ? 'Save test entry' : 'Add test entry'} <Icon name="arrow" size={14} /></button></div>
+      </form>
+    </section>
+  </div>;
+}
+
 function exportCsv(transactions: DemoTransaction[], account: DemoAccount) {
   const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
   const lines = [
@@ -165,6 +248,8 @@ function exportCsv(transactions: DemoTransaction[], account: DemoAccount) {
 
 function App() {
   const [overview, setOverview] = useState<DemoOverview | null>(null);
+  const [sandboxChanges, setSandboxChanges] = useState<SandboxChanges>(readSandboxChanges);
+  const [entryEditor, setEntryEditor] = useState<DemoTransaction | null | false>(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -195,10 +280,51 @@ function App() {
     return () => controller.abort();
   }, []);
 
-  const selectedAccount = overview?.accounts.find((account) => account.id === selectedAccountId) ?? overview?.accounts[0];
-  const accountTransactions = useMemo(() => overview?.transactions
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(sandboxStorageKey, JSON.stringify(sandboxChanges));
+    } catch {
+      // The sandbox still works for this page visit when browser storage is unavailable.
+    }
+  }, [sandboxChanges]);
+
+  const visitorOverview = useMemo(() => overview ? applySandboxChanges(overview, sandboxChanges) : null, [overview, sandboxChanges]);
+  const dashboardOverview = visitorOverview;
+
+  function saveSandboxEntry(entry: Omit<DemoTransaction, 'id'>, existingId?: string) {
+    const savedEntry: DemoTransaction = { ...entry, id: existingId ?? crypto.randomUUID() };
+    setSandboxChanges((current) => {
+      if (!existingId) return { ...current, additions: [savedEntry, ...current.additions] };
+      if (current.additions.some((item) => item.id === existingId)) {
+        return { ...current, additions: current.additions.map((item) => item.id === existingId ? savedEntry : item) };
+      }
+      return { ...current, edits: { ...current.edits, [existingId]: savedEntry } };
+    });
+    setEntryEditor(false);
+    setExpandedTransactionId('');
+  }
+
+  function removeSandboxEntry(id: string) {
+    setSandboxChanges((current) => {
+      if (current.additions.some((item) => item.id === id)) return { ...current, additions: current.additions.filter((item) => item.id !== id) };
+      const edits = { ...current.edits };
+      delete edits[id];
+      return { ...current, edits, removed: current.removed.includes(id) ? current.removed : [...current.removed, id] };
+    });
+    setExpandedTransactionId('');
+  }
+
+  function resetSandbox() {
+    setSandboxChanges(emptySandbox);
+    setExpandedTransactionId('');
+    setFilter('all');
+    setSearch('');
+  }
+
+  const selectedAccount = dashboardOverview?.accounts.find((account) => account.id === selectedAccountId) ?? dashboardOverview?.accounts[0];
+  const accountTransactions = useMemo(() => dashboardOverview?.transactions
     .filter((transaction) => transaction.accountId === selectedAccount?.id)
-    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)) ?? [], [overview, selectedAccount]);
+    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)) ?? [], [dashboardOverview, selectedAccount]);
   const periodTransactions = useMemo(() => {
     if (period === 'all') return accountTransactions;
     const threshold = Date.now() - (period === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000;
@@ -214,17 +340,17 @@ function App() {
   }, [periodTransactions, filter, search]);
   const chartPoints = useMemo(() => {
     if (!selectedAccount) return [];
-    const allPoints = buildHistory(selectedAccount, overview?.transactions ?? []);
+    const allPoints = buildHistory(selectedAccount, dashboardOverview?.transactions ?? []);
     if (period === 'all') return allPoints;
     const threshold = Date.now() - (period === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000;
     const visible = allPoints.filter((point) => point.date.getTime() >= threshold);
     const prior = allPoints.filter((point) => point.date.getTime() < threshold).at(-1);
     return prior && visible.length ? [prior, ...visible] : visible;
-  }, [overview, selectedAccount, period]);
+  }, [dashboardOverview, selectedAccount, period]);
 
-  const totalBalance = overview?.accounts.reduce((total, account) => total + amountOf(account.balance), 0) ?? 0;
-  const ledgerBalanced = overview?.accounts.every((account) => {
-    const endBalance = buildHistory(account, overview.transactions).at(-1)?.balance ?? 0;
+  const totalBalance = dashboardOverview?.accounts.reduce((total, account) => total + amountOf(account.balance), 0) ?? 0;
+  const ledgerBalanced = dashboardOverview?.accounts.every((account) => {
+    const endBalance = buildHistory(account, dashboardOverview.transactions).at(-1)?.balance ?? 0;
     return Math.abs(endBalance - amountOf(account.balance)) < 0.001;
   }) ?? false;
 
@@ -248,7 +374,7 @@ function App() {
         <p className="nav-label">THE LEDGER</p>
         <nav className="side-nav" aria-label="Dashboard sections">
           <button className={`nav-item ${activeNav === 'overview' ? 'active' : ''}`} onClick={() => jumpTo('overview')}><Icon name="home" size={17} /><span>Overview</span><b>01</b></button>
-          <button className={`nav-item ${activeNav === 'accounts' ? 'active' : ''}`} onClick={() => jumpTo('accounts')}><Icon name="accounts" size={17} /><span>Accounts</span><b>{String(overview?.accounts.length ?? 0).padStart(2, '0')}</b></button>
+          <button className={`nav-item ${activeNav === 'accounts' ? 'active' : ''}`} onClick={() => jumpTo('accounts')}><Icon name="accounts" size={17} /><span>Accounts</span><b>{String(dashboardOverview?.accounts.length ?? 0).padStart(2, '0')}</b></button>
           <button className={`nav-item ${activeNav === 'activity' ? 'active' : ''}`} onClick={() => jumpTo('activity')}><Icon name="activity" size={17} /><span>Entries</span><b>↗</b></button>
         </nav>
         <div className="sidebar-aside"><span className="aside-rule" /><p>Every movement<br />has a counter-entry.</p><span className="aside-index">DEBIT<br />CREDIT</span></div>
@@ -262,64 +388,65 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <div className="breadcrumbs"><span>VAULTSTREAM</span><span className="crumb-mark">/</span><strong>PUBLIC DEMO</strong></div>
-          <div className="topbar-actions"><span className="folio-date">FOLIO 29—10—26</span><span className="demo-badge"><i /> SYNTHETIC DATA</span><button className={`icon-button refresh-button ${refreshing ? 'is-refreshing' : ''}`} onClick={() => void handleRefresh()} aria-label="Refresh sample data" title="Refresh sample data"><Icon name="refresh" size={16} /></button></div>
+          <div className="topbar-actions"><span className="folio-date">FOLIO 29—10—26</span><span className="demo-badge"><i /> VISITOR TEST SANDBOX</span><button className={`icon-button refresh-button ${refreshing ? 'is-refreshing' : ''}`} onClick={() => void handleRefresh()} aria-label="Refresh sample data" title="Refresh sample data"><Icon name="refresh" size={16} /></button></div>
         </header>
 
         <div className="page-container">
           <section className="hero" id="overview">
-            <div className="hero-copy"><div className="hero-overline"><span>01</span><i /> PUBLIC LEDGER STUDY</div><h1>Money,<br /><em>made legible.</em></h1><p className="hero-subtitle">A small, inspectable ledger. Follow every balance back to the entries that shaped it.</p><div className="hero-meta"><span><Icon name="clock" size={14} /> 30-day sample window</span><span><i /> Read-only sandbox</span></div></div>
+            <div className="hero-copy"><div className="hero-overline"><span>01</span><i /> PUBLIC LEDGER STUDY</div><h1>Money,<br /><em>made legible.</em></h1><p className="hero-subtitle">A small, inspectable ledger. Follow every balance back to the entries that shaped it.</p><div className="hero-meta"><span><Icon name="clock" size={14} /> 30-day sample window</span><span><i /> Try entries in your own tab</span></div></div>
             <div className="hero-ledger" aria-label="Illustration of a balanced double-entry transfer"><div className="ledger-stamp">POSTED<br />DEMO</div><div className="hero-ledger-heading"><span>JOURNAL / ENTRY 011</span><span>INR · 01</span></div><div className="journal-line"><span className="journal-marker debit-marker">DR</span><span className="journal-label"><strong>Source account</strong><small>TRANSFER OUT</small></span><span className="journal-value">₹ 55.00</span></div><div className="journal-line"><span className="journal-marker credit-marker">CR</span><span className="journal-label"><strong>Destination account</strong><small>TRANSFER IN</small></span><span className="journal-value">₹ 55.00</span></div><div className="journal-balance"><span>Journal difference</span><strong>₹ 0.00 <Icon name="check" size={14} /></strong></div><div className="ledger-scribble">equal &amp; opposite</div></div>
             <div className="hero-side-note"><span className="side-note-line" />FIELD STUDY<br />FICTIONAL RECORDS</div>
           </section>
 
-          {overview?.notice && <div className="notice-banner"><Icon name="shield" size={16} /><span><strong>Simulation notice</strong> {overview.notice}</span></div>}
+          {dashboardOverview?.notice && <div className="notice-banner"><Icon name="shield" size={16} /><span><strong>Simulation notice</strong> {dashboardOverview.notice}</span></div>}
           {error && <div className="error-banner" role="alert"><span><strong>Demo service is taking a pause.</strong> {error}</span><button onClick={() => void handleRefresh()}>Retry <Icon name="arrow" size={13} /></button></div>}
 
           <section className="measure-strip" aria-label="Sample ledger summary">
             <article className="measure measure-total"><span className="measure-label">TOTAL SAMPLE BALANCE <i>01</i></span><strong>{loading ? <span className="skeleton skeleton-wide" /> : inr.format(totalBalance)}</strong><small>Across the two demo accounts</small></article>
-            <article className="measure"><span className="measure-label">ACCOUNTS <i>02</i></span><strong>{loading ? '—' : String(overview?.accounts.length ?? 0).padStart(2, '0')}</strong><small>Closed synthetic set</small></article>
-            <article className="measure"><span className="measure-label">POSTINGS <i>03</i></span><strong>{loading ? '—' : String(overview?.transactions.length ?? 0).padStart(2, '0')}</strong><small>Paired entries · 30 days</small></article>
+            <article className="measure"><span className="measure-label">ACCOUNTS <i>02</i></span><strong>{loading ? '—' : String(dashboardOverview?.accounts.length ?? 0).padStart(2, '0')}</strong><small>Closed synthetic set</small></article>
+            <article className="measure"><span className="measure-label">POSTINGS <i>03</i></span><strong>{loading ? '—' : String(dashboardOverview?.transactions.length ?? 0).padStart(2, '0')}</strong><small>Paired entries · 30 days</small></article>
             <article className="measure measure-status"><span className="measure-label">BALANCE TEST <i>04</i></span><strong className={loading ? '' : ledgerBalanced ? 'status-good' : 'status-review'}>{loading ? '—' : ledgerBalanced ? 'Passed' : 'Review'}</strong><small><span className={`status-dot ${loading ? 'dot-wait' : ledgerBalanced ? 'dot-good' : 'dot-review'}`} /> Account totals trace to history</small></article>
           </section>
 
           <section className="ledger-layout">
             <article className="paper-panel chart-panel" id="accounts">
-              <div className="section-head"><div><span className="section-number">A / 01</span><h2>Balance, over time</h2><p>Select a record; inspect its running balance.</p></div><label className="account-selector"><span className="sr-only">Select a sample account</span><select value={selectedAccount?.id ?? ''} onChange={(event) => setSelectedAccountId(event.target.value)} disabled={!overview?.accounts.length}><option value="" disabled>Choose account</option>{overview?.accounts.map((account) => <option key={account.id} value={account.id}>{account.accountHolderName}</option>)}</select><span aria-hidden="true">⌄</span></label></div>
+              <div className="section-head"><div><span className="section-number">A / 01</span><h2>Balance, over time</h2><p>Select a record; inspect its running balance.</p></div><label className="account-selector"><span className="sr-only">Select a sample account</span><select value={selectedAccount?.id ?? ''} onChange={(event) => setSelectedAccountId(event.target.value)} disabled={!dashboardOverview?.accounts.length}><option value="" disabled>Choose account</option>{dashboardOverview?.accounts.map((account) => <option key={account.id} value={account.id}>{account.accountHolderName}</option>)}</select><span aria-hidden="true">⌄</span></label></div>
               <div className="chart-header-readout"><div><span className="readout-caption">{selectedAccount?.accountHolderName ?? 'Selected account'}</span><strong>{loading || !selectedAccount ? <span className="skeleton skeleton-wide" /> : inr.format(amountOf(selectedAccount.balance))}</strong></div><span className="readout-current"><i /> CURRENT BALANCE</span></div>
               {loading ? <div className="chart-loading"><span /><span /><span /></div> : <BalanceChart points={chartPoints} accountName={selectedAccount?.accountHolderName ?? 'demo account'} period={period} onPeriodChange={setPeriod} />}
               <div className="chart-footnote"><span><i /> BALANCE TRACE</span><span>Hover or focus the plot to inspect entries</span></div>
             </article>
 
             <article className="account-panel" aria-labelledby="accounts-title">
-              <div className="account-panel-heading"><div><span className="section-number">A / 02</span><h2 id="accounts-title">The accounts</h2></div><span className="account-count">{loading ? '—' : `${overview?.accounts.length ?? 0} RECORDS`}</span></div>
+              <div className="account-panel-heading"><div><span className="section-number">A / 02</span><h2 id="accounts-title">The accounts</h2></div><span className="account-count">{loading ? '—' : `${dashboardOverview?.accounts.length ?? 0} RECORDS`}</span></div>
               <p className="account-intro">Two fictional ledgers. Click one to trace its balance.</p>
-              <div className="account-stack">{loading ? <><div className="account-skeleton" /><div className="account-skeleton" /></> : overview?.accounts.map((account, index) => <AccountCard key={account.id} account={account} index={index} selected={selectedAccount?.id === account.id} onSelect={() => setSelectedAccountId(account.id)} />)}</div>
+              <div className="account-stack">{loading ? <><div className="account-skeleton" /><div className="account-skeleton" /></> : dashboardOverview?.accounts.map((account, index) => <AccountCard key={account.id} account={account} index={index} selected={selectedAccount?.id === account.id} onSelect={() => setSelectedAccountId(account.id)} />)}</div>
               <div className="account-panel-foot"><span>NO REAL CUSTOMERS</span><span>EST. 2026</span></div>
             </article>
           </section>
 
           <section className="paper-panel activity-panel" id="activity">
-            <div className="activity-topline"><div><span className="section-number">B / 01</span><h2>Entries &amp; movements</h2><p>One account at a time. Every row belongs to the selected synthetic ledger.</p></div><div className="activity-actions"><a className="raw-link" href={demoOverviewUrl} target="_blank" rel="noreferrer">Raw API <Icon name="external" size={13} /></a><button className="export-button" disabled={!selectedAccount || !displayedTransactions.length} onClick={() => selectedAccount && exportCsv(displayedTransactions, selectedAccount)}><Icon name="download" size={14} /> Export CSV</button></div></div>
+            <div className="activity-topline"><div><span className="section-number">B / 01</span><h2>Entries &amp; movements</h2><p>Your edits are private to this browser tab and reset when it closes.</p></div><div className="activity-actions"><a className="raw-link" href={demoOverviewUrl} target="_blank" rel="noreferrer">Raw API <Icon name="external" size={13} /></a><button className="sandbox-reset" disabled={sandboxChanges.additions.length === 0 && Object.keys(sandboxChanges.edits).length === 0 && sandboxChanges.removed.length === 0} onClick={resetSandbox}>Reset changes</button><button className="sandbox-add" disabled={!selectedAccount || loading} onClick={() => setEntryEditor(null)}>+ Add test entry</button><button className="export-button" disabled={!selectedAccount || !displayedTransactions.length} onClick={() => selectedAccount && exportCsv(displayedTransactions, selectedAccount)}><Icon name="download" size={14} /> Export CSV</button></div></div>
             <div className="table-toolbar"><div className="filter-tabs" role="group" aria-label="Filter ledger entries">{([['all', 'Everything'], ['incoming', 'Inflow'], ['outgoing', 'Outflow']] as const).map(([value, label]) => <button key={value} className={filter === value ? 'selected' : ''} onClick={() => { setFilter(value); setExpandedTransactionId(''); }}>{label}<small>{value === 'all' ? periodTransactions.length : periodTransactions.filter((transaction) => value === 'incoming' ? isIncoming(transaction.type) : !isIncoming(transaction.type)).length}</small></button>)}</div><label className="search-field"><Icon name="search" size={15} /><span className="sr-only">Search synthetic entries</span><input value={search} onChange={(event) => { setSearch(event.target.value); setExpandedTransactionId(''); }} placeholder="Find a reference" /><kbd>/</kbd></label></div>
             <div className="table-scroll"><table><thead><tr><th>ENTRY</th><th>REFERENCE</th><th>DATE</th><th>CLASSIFICATION</th><th className="amount-cell">AMOUNT</th><th className="expand-column"><span className="sr-only">Open details</span></th></tr></thead><tbody>
               {loading ? <tr><td colSpan={6} className="table-state">Opening the sample ledger…</td></tr> : displayedTransactions.length === 0 ? <tr><td colSpan={6} className="table-state">No entries match this view.</td></tr> : displayedTransactions.map((transaction, index) => {
                 const incoming = isIncoming(transaction.type);
                 const expanded = expandedTransactionId === transaction.id;
-                return <FragmentRow key={transaction.id} transaction={transaction} index={index} incoming={incoming} expanded={expanded} account={selectedAccount} onToggle={() => setExpandedTransactionId(expanded ? '' : transaction.id)} />;
+                return <FragmentRow key={transaction.id} transaction={transaction} index={index} incoming={incoming} expanded={expanded} account={selectedAccount} onToggle={() => setExpandedTransactionId(expanded ? '' : transaction.id)} onEdit={() => setEntryEditor(transaction)} onDelete={() => removeSandboxEntry(transaction.id)} />;
               })}
             </tbody></table></div>
-            <div className="activity-footer"><span><Icon name="shield" size={13} /> Synthetic ledger · read-only</span><span>Showing {displayedTransactions.length} {displayedTransactions.length === 1 ? 'entry' : 'entries'}</span></div>
+            <div className="activity-footer"><span><Icon name="shield" size={13} /> Synthetic ledger · visitor changes stay in this tab</span><span>Showing {displayedTransactions.length} {displayedTransactions.length === 1 ? 'entry' : 'entries'}</span></div>
           </section>
 
           <footer className="page-footer"><span>VAULTSTREAM <i>×</i> PUBLIC LEDGER STUDY</span><span>Built for learning · Not a financial service</span><a href="https://github.com/Priyadharsan-85/VaultStream" target="_blank" rel="noreferrer">SOURCE CODE <Icon name="external" size={12} /></a></footer>
         </div>
       </main>
+      {entryEditor !== false && selectedAccount && <SandboxEntryDialog account={selectedAccount} transaction={entryEditor || undefined} onClose={() => setEntryEditor(false)} onSave={saveSandboxEntry} />}
     </div>
   );
 }
 
 function AccountCard({ account, index, selected, onSelect }: { account: DemoAccount; index: number; selected: boolean; onSelect: () => void }) {
-  return <button className={`account-card account-card-${index % 2} ${selected ? 'account-selected' : ''}`} onClick={onSelect} aria-pressed={selected}>
+  return <button className={`account-card account-card-${index % 2} ${selected ? 'account-card-selected' : ''}`} onClick={onSelect} aria-pressed={selected}>
     <div className="account-card-top"><span>{index === 0 ? 'SOURCE LEDGER' : 'DESTINATION LEDGER'}</span><span className="account-status"><i /> ACTIVE</span></div>
     <div className="account-card-mid"><span className="account-monogram">0{index + 1}</span><span className="account-holder">{account.accountHolderName}</span><Icon name="arrow" size={16} className="account-arrow" /></div>
     <div className="account-card-bottom"><span>•••• {account.accountNumber.slice(-4)}</span><strong>{inr.format(amountOf(account.balance))}</strong></div>
@@ -327,13 +454,15 @@ function AccountCard({ account, index, selected, onSelect }: { account: DemoAcco
   </button>;
 }
 
-function FragmentRow({ transaction, index, incoming, expanded, account, onToggle }: {
+function FragmentRow({ transaction, index, incoming, expanded, account, onToggle, onEdit, onDelete }: {
   transaction: DemoTransaction;
   index: number;
   incoming: boolean;
   expanded: boolean;
   account?: DemoAccount;
   onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   const typeLabel = transaction.type.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
   return <>
@@ -345,7 +474,7 @@ function FragmentRow({ transaction, index, incoming, expanded, account, onToggle
       <td className={`amount-cell transaction-amount ${incoming ? 'amount-in' : 'amount-out'}`}>{incoming ? '+' : '−'}{inr.format(amountOf(transaction.amount))}</td>
       <td className="expand-cell"><button className={`row-expand ${expanded ? 'expanded' : ''}`} onClick={onToggle} aria-label={expanded ? 'Hide entry details' : 'Show entry details'}><span>+</span></button></td>
     </tr>
-    {expanded && <tr className="detail-row"><td colSpan={6}><div className="entry-detail"><div><span>JOURNAL REFERENCE</span><strong>{transaction.referenceId ?? 'No reference'}</strong></div><div><span>POSTED AT</span><strong>{dateFormat.format(new Date(transaction.timestamp))} · {new Date(transaction.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</strong></div><div><span>ENTRY AMOUNT</span><strong>{inr.format(amountOf(transaction.amount))}</strong></div><div className="detail-balance"><span>RECORD TYPE</span><strong>{typeLabel}</strong></div></div></td></tr>}
+    {expanded && <tr className="detail-row"><td colSpan={6}><div className="entry-detail"><div><span>JOURNAL REFERENCE</span><strong>{transaction.referenceId ?? 'No reference'}</strong></div><div><span>POSTED AT</span><strong>{dateFormat.format(new Date(transaction.timestamp))} · {new Date(transaction.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</strong></div><div><span>ENTRY AMOUNT</span><strong>{inr.format(amountOf(transaction.amount))}</strong></div><div className="detail-balance"><span>RECORD TYPE</span><strong>{typeLabel}</strong></div><div className="sandbox-row-actions"><button onClick={onEdit}>Edit test entry</button><button onClick={onDelete}>Remove from this tab</button></div></div></td></tr>}
   </>;
 }
 
