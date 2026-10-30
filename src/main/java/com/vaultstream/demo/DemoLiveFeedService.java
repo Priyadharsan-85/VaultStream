@@ -106,7 +106,7 @@ public class DemoLiveFeedService {
         return emitter;
     }
 
-    private DemoLiveEventDto createEvent(List<Account> accounts) {
+    DemoLiveEventDto createEvent(List<Account> accounts) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         Account first = accounts.get(random.nextInt(accounts.size()));
         Account second = accounts.stream().filter(account -> !account.getId().equals(first.getId())).findFirst().orElseThrow();
