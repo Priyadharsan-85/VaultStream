@@ -19,14 +19,14 @@
 ---
 
 > [!CAUTION]
-> **Educational demo only. VaultStream is not a bank, wallet, payment processor, or production-ready financial service. Never connect real customer funds or personal data.** Customer transfers, manual balance adjustments, and registration remain disabled in the hosted demo configuration.
+> **Educational demo only. VaultStream is not a bank, wallet, payment processor, or production-ready financial service. Never connect real customer funds or personal data.** The public dashboard's add, edit, and remove controls change fictional records in the visitor's browser tab only; the hosted API remains read-only, and customer transfers and registration stay disabled.
 
 ## Project at a glance
 
 | | |
 |---|---|
 | **What it demonstrates** | Double-entry ledger patterns, transactional APIs, JWT authentication, idempotency, reconciliation, and monitoring |
-| **Application type** | Read-only React portfolio dashboard plus Spring Boot REST API; no customer wallet interface |
+| **Application type** | React portfolio dashboard with a private, tab-local test sandbox plus a read-only Spring Boot demo API |
 | **Demo data** | Use synthetic accounts and transactions only |
 | **Stack** | Java 17 · Spring Boot · React · TypeScript · Vite · Tailwind CSS · PostgreSQL · Docker |
 | **Quality checks** | Maven verification, container build and image scan, CodeQL, dependency review |
@@ -36,7 +36,8 @@
 ```mermaid
 flowchart LR
     Visitor[Portfolio visitor] --> Dashboard[React dashboard]
-    Dashboard -->|Read-only synthetic data| API[Spring Boot demo API]
+    Dashboard -->|Read-only synthetic seed data| API[Spring Boot demo API]
+    Dashboard -->|Visitor-only test edits| TabStorage[(Current browser tab)]
     API --> Auth[JWT authentication]
     API --> Services[Account and transaction services]
     Services --> Ledger[Double-entry ledger]
@@ -129,7 +130,7 @@ Authentication is available at `/api/auth/login`. Account and transaction routes
 | Administration | `GET /api/admin/ledger/reconcile/latest`, `POST /api/admin/ledger/reconcile`, account management routes |
 | Health | `GET /actuator/health`, `GET /actuator/health/liveness` |
 
-Visitors can explore two synthetic accounts, 30 days of sample history, and read-only transaction filters in the React dashboard. The dashboard is served separately from the public sample endpoint and needs no login. The API endpoint only returns fixed synthetic data and is available in the Render demo profile. Registration, transfers, and manual ledger adjustments are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
+Visitors can explore two synthetic accounts and 30 days of sample history without logging in. They can also add, edit, and remove fictional ledger entries. These changes are held in that browser tab's `sessionStorage`, update the dashboard locally, and disappear when the tab closes; they are never sent to the API or shared with other visitors. The public endpoint returns fixed synthetic seed data and remains read-only. Registration and real transfers are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
 
 ## Deploy a portfolio demo
 
