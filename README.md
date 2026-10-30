@@ -123,14 +123,14 @@ Authentication is available at `/api/auth/login`. Account and transaction routes
 
 | Area | Example routes |
 |---|---|
-| Public demo | `GET /api/demo/overview` (read-only, synthetic data; available in the Render demo profile) |
+| Public demo | `GET /api/demo/overview` (read-only synthetic snapshot), `GET /api/demo/live` (simulated server-sent event stream; Render demo profile only) |
 | Authentication | `POST /api/auth/login`, `POST /api/auth/register`, `POST /api/auth/logout` |
 | Accounts | `GET /api/accounts`, `GET /api/accounts/{id}`, `GET /api/accounts/{id}/statement`, `POST /api/accounts` |
 | Transactions | `GET /api/transactions/account/{accountId}`, `POST /api/transactions/transfer` |
 | Administration | `GET /api/admin/ledger/reconcile/latest`, `POST /api/admin/ledger/reconcile`, account management routes |
 | Health | `GET /actuator/health`, `GET /actuator/health/liveness` |
 
-Visitors can explore two synthetic accounts and 30 days of sample history without logging in. They can also add, edit, and remove fictional ledger entries. These changes are held in that browser tab's `sessionStorage`, update the dashboard locally, and disappear when the tab closes; they are never sent to the API or shared with other visitors. The public endpoint returns fixed synthetic seed data and remains read-only. Registration and real transfers are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
+Visitors can explore two synthetic accounts and 30 days of sample history without logging in. A separate `/api/demo/live` stream emits generated events every six seconds; the dashboard applies these only to its in-memory view, updating the chart and balances without writing transactions to the database. Streams close after two minutes and reconnect automatically, with a cap on simultaneous connections. Visitors can also add, edit, and remove fictional ledger entries. Those personal test changes are held in that browser tab's `sessionStorage`, disappear when the tab closes, and are never sent to the API or shared with other visitors. The public overview endpoint remains fixed and read-only. Registration and real transfers are disabled in the hosted demo. API documentation is enabled for local development and disabled by the production profile. See the OpenAPI page when running locally for request and response schemas.
 
 ## Deploy a portfolio demo
 
