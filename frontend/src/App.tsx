@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import { demoOverviewUrl, getDemoOverview } from './api';
-import type { DemoAccount, DemoOverview, DemoTransaction } from './types';
+import { demoLiveUrl, demoOverviewUrl, getDemoOverview } from './api';
+import type { DemoAccount, DemoLiveEvent, DemoOverview, DemoTransaction } from './types';
 
 type IconName = 'home' | 'accounts' | 'activity' | 'ledger' | 'arrow' | 'refresh' | 'external' | 'search' | 'download' | 'clock' | 'shield' | 'wallet' | 'transfer' | 'check' | 'close';
 type HistoryPoint = { date: Date; balance: number };
@@ -27,10 +27,11 @@ function readSandboxChanges(): SandboxChanges {
   }
 }
 
-function applySandboxChanges(overview: DemoOverview, changes: SandboxChanges): DemoOverview {
+function applySandboxChanges(overview: DemoOverview, changes: SandboxChanges, liveEvents: DemoLiveEvent[]): DemoOverview {
   const removed = new Set(changes.removed);
+  const seedAndLiveTransactions = [...overview.transactions, ...liveEvents.flatMap((event) => event.transactions)];
   const transactions = [
-    ...overview.transactions.filter((transaction) => !removed.has(transaction.id)).map((transaction) => changes.edits[transaction.id] ?? transaction),
+    ...seedAndLiveTransactions.filter((transaction) => !removed.has(transaction.id)).map((transaction) => changes.edits[transaction.id] ?? transaction),
     ...changes.additions,
   ];
   const accounts = overview.accounts.map((account) => {
@@ -250,6 +251,8 @@ function App() {
   const [overview, setOverview] = useState<DemoOverview | null>(null);
   const [sandboxChanges, setSandboxChanges] = useState<SandboxChanges>(readSandboxChanges);
   const [entryEditor, setEntryEditor] = useState<DemoTransaction | null | false>(false);
+  const [liveEvents, setLiveEvents] = useState<DemoLiveEvent[]>([]);
+  const [liveStatus, setLiveStatus] = useState<'connecting' | 'live' | 'reconnecting' | 'paused'>('connecting');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -288,7 +291,36 @@ function App() {
     }
   }, [sandboxChanges]);
 
-  const visitorOverview = useMemo(() => overview ? applySandboxChanges(overview, sandboxChanges) : null, [overview, sandboxChanges]);
+  const hasOverview = overview !== null;
+  useEffect(() => {
+    if (!hasOverview) return;
+    const source = new EventSource(demoLiveUrl);
+    let receivedEvents = 0;
+    setLiveStatus('connecting');
+
+    source.onopen = () => setLiveStatus('live');
+    source.onerror = () => setLiveStatus('reconnecting');
+    source.addEventListener('ledger-event', (message) => {
+      try {
+        const event = JSON.parse((message as MessageEvent<string>).data) as DemoLiveEvent;
+        if (!event.id || !Array.isArray(event.transactions)) return;
+        receivedEvents += 1;
+        setLiveEvents((current) => [event, ...current]);
+        if (receivedEvents >= 120) {
+          source.close();
+          setLiveStatus('paused');
+        } else {
+          setLiveStatus('live');
+        }
+      } catch {
+        // Ignore malformed stream data and let EventSource continue reconnecting.
+      }
+    });
+
+    return () => source.close();
+  }, [hasOverview]);
+
+  const visitorOverview = useMemo(() => overview ? applySandboxChanges(overview, sandboxChanges, liveEvents) : null, [overview, sandboxChanges, liveEvents]);
   const dashboardOverview = visitorOverview;
 
   function saveSandboxEntry(entry: Omit<DemoTransaction, 'id'>, existingId?: string) {
@@ -406,6 +438,14 @@ function App() {
             <article className="measure"><span className="measure-label">ACCOUNTS <i>02</i></span><strong>{loading ? '—' : String(dashboardOverview?.accounts.length ?? 0).padStart(2, '0')}</strong><small>Closed synthetic set</small></article>
             <article className="measure"><span className="measure-label">POSTINGS <i>03</i></span><strong>{loading ? '—' : String(dashboardOverview?.transactions.length ?? 0).padStart(2, '0')}</strong><small>Paired entries · 30 days</small></article>
             <article className="measure measure-status"><span className="measure-label">BALANCE TEST <i>04</i></span><strong className={loading ? '' : ledgerBalanced ? 'status-good' : 'status-review'}>{loading ? '—' : ledgerBalanced ? 'Passed' : 'Review'}</strong><small><span className={`status-dot ${loading ? 'dot-wait' : ledgerBalanced ? 'dot-good' : 'dot-review'}`} /> Account totals trace to history</small></article>
+          </section>
+
+          <section className="live-feed-panel" aria-labelledby="live-feed-title">
+            <div className="live-feed-heading"><div><span className="section-number">C / LIVE STREAM</span><h2 id="live-feed-title">Activity, as it happens</h2><p>Generated sample entries update the ledger in real time.</p></div><span className={`live-stream-status stream-${liveStatus}`}><i />{liveStatus === 'live' ? 'STREAM LIVE' : liveStatus === 'reconnecting' ? 'RECONNECTING' : liveStatus === 'paused' ? 'SESSION PAUSED' : 'CONNECTING'}</span></div>
+            <div className="live-feed-events" aria-live="polite" aria-relevant="additions">
+              {liveEvents.length === 0 ? <div className="live-feed-empty"><span className="live-pulse" />Waiting for the first simulated ledger event<span className="live-feed-dots">···</span></div> : liveEvents.slice(0, 4).map((event) => <article className="live-event" key={event.id}><span className="live-event-symbol">{event.label.includes('transfer') ? '↔' : '↗'}</span><span className="live-event-copy"><strong>{event.label}</strong><small>{timeFormat.format(new Date(event.timestamp))} · {event.transactions.length} {event.transactions.length === 1 ? 'posting' : 'postings'}</small></span><b>{inr.format(amountOf(event.amount))}</b></article>)}
+            </div>
+            <div className="live-feed-foot"><span>SIMULATED EVENTS</span><span>NO MONEY MOVES · NO SAVED LEDGER WRITES</span><span>{liveEvents.length} / 120</span></div>
           </section>
 
           <section className="ledger-layout">

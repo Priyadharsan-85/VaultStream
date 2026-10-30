@@ -23,3 +23,11 @@ export type DemoOverview = {
   accounts: DemoAccount[];
   transactions: DemoTransaction[];
 };
+
+export type DemoLiveEvent = {
+  id: string;
+  label: string;
+  amount: number | string;
+  timestamp: string;
+  transactions: DemoTransaction[];
+};
