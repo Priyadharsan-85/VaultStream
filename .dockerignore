@@ -1,11 +1,35 @@
+# Source control and local editor state
 .git
 .github
 .idea
 .vscode
+*.iml
+
+# Build outputs and dependency caches
 target
-logs
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Local configuration and credentials
 .env
 .env.*
-secrets
 !.env.example
+secrets
+*.pem
+*.key
+
+# Runtime data and logs
+logs
+backups
 *.log
+*.db
+*.backup
+*.bak
+
+# Files not used by the backend image
+README.md
+PRODUCTION_READINESS.md
+RENDER_DEMO.md
+docker-compose*.yml
+monitoring
