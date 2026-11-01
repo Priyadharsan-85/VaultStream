@@ -44,4 +44,14 @@ After deployment, check:
 
 For a portfolio link, share the dashboard's public URL from Render. The API is hosted separately; its direct sample endpoint is available at `https://YOUR_RENDER_API_HOST/api/demo/overview`. Keep administrator credentials private and do not seed any real personal information.
 
+To check the deployed services from the project folder, run the smoke check with the API and dashboard URLs shown in Render:
+
+```powershell
+node scripts/smoke-test-demo.mjs `
+  --api https://YOUR_RENDER_API_HOST `
+  --dashboard https://YOUR_RENDER_DASHBOARD_HOST
+```
+
+It checks the dashboard response, API liveness, synthetic overview payload, and that the simulated feed emits an event. The live-feed check waits for its first event, so allow a few seconds for it to finish.
+
 Render's free service can sleep when idle and has limited compute. This is suitable only for a hobby demo; it provides no production availability guarantee. Keep backups of anything you need because this setup does not configure backups for the Neon free database.
