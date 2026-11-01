@@ -33,6 +33,9 @@ jobs:
       - name: Build React dashboard
         run: npm ci --prefix frontend --no-audit --no-fund && npm --prefix frontend run build
 
+      - name: Check deployment smoke-test script syntax
+        run: node --check scripts/smoke-test-demo.mjs
+
       - name: Set up Java 17
         uses: actions/setup-java@v6.1.0
         with:
