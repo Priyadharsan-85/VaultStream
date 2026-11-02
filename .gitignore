@@ -30,7 +30,15 @@ docker-compose.override.yml
 
 # Environment variables
 .env
+.env.*
+!.env.example
 secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.agekey
 
 # VaultStream specific
 logs/
@@ -38,3 +46,6 @@ backups/
 *.db
 *.backup
 *.bak
+*.dump
+*.age
+*.partial

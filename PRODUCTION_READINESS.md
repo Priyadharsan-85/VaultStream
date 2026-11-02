@@ -37,7 +37,7 @@ These checks confirm repository configuration only. They do not confirm the host
 
 - [ ] Create unique production database, JWT, and administrator credentials in the provider's secret manager or protected host files.
 - [ ] For an already initialized database volume, apply and review the runtime/migration role grants before upgrading; the Compose initialization script only runs on a new empty volume.
-- [ ] Ensure `.env`, secret files, database dumps, and JWT signing material are excluded from source control and ordinary logs.
+- [x] Ensure `.env`, secret files, database dumps, and JWT signing material are excluded from source control and ordinary logs through ignore rules for environment files, key files, encrypted dumps, and logs.
 - [ ] Establish and rehearse administrator credential rotation and JWT signing-key rotation. Restrict who can read or change production secrets.
 - [ ] Confirm the production browser origin list contains only the deployed client origins.
 
