@@ -37,7 +37,7 @@ jobs:
         run: node --test scripts/smoke-test-demo.test.mjs
 
       - name: Set up Java 17
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
           java-version: '17'
@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@v7.0.1
 
       - name: Set up Java 17
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
           java-version: '17'
