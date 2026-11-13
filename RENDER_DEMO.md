@@ -31,6 +31,12 @@ Fill the values marked as private in the Render setup form:
 
 The Render platform supplies the API port and public service URL. Keep `VAULTSTREAM_REGISTRATION_ENABLED`, `VAULTSTREAM_LEDGER_MANUAL_ADJUSTMENTS_ENABLED`, and `VAULTSTREAM_CUSTOMER_TRANSFERS_ENABLED` set to `false`.
 
+## Free-tier limits and cost control
+
+The Blueprint selects Render's Free plan for the API; the static dashboard is also free. Render free web services spin down after 15 minutes without inbound traffic and can take about a minute to start again. Render currently includes 750 free web-service instance hours per workspace per month, along with monthly outbound-bandwidth and build-pipeline allowances. See [Render's current free-plan limits](https://render.com/docs/free) before deploying, since quotas can change.
+
+To avoid overage charges, do not add a payment method to Render. If you exceed the free web-service hours or outbound bandwidth, Render may suspend free services for the rest of the month; exhausting build-pipeline minutes prevents new builds until the allowance resets. The Blueprint uses Neon rather than Render Postgres because Render's free Postgres databases expire after 30 days. Neon has separate plan limits, so confirm its current [free-plan terms](https://neon.tech/pricing) and region availability when creating the database. Keep the API and database in Singapore to reduce latency.
+
 ## Verify the demo
 
 After deployment, check:
@@ -54,4 +60,4 @@ node scripts/smoke-test-demo.mjs `
 
 It checks the dashboard response, API liveness, synthetic overview payload, and that the simulated feed emits an event. The live-feed check waits for its first event, so allow a few seconds for it to finish.
 
-Render's free service can sleep when idle and has limited compute. This is suitable only for a hobby demo; it provides no production availability guarantee. Keep backups of anything you need because this setup does not configure backups for the Neon free database.
+This free setup is suitable only for a hobby demo; it provides no production availability guarantee. Keep backups of anything you need because this setup does not configure backups for the Neon free database.
