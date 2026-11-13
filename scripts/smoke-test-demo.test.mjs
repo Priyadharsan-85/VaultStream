@@ -55,6 +55,14 @@ test('deployment smoke check validates the demo and rejects a missing synthetic-
   assert.match(success.stdout, /PASS demo overview returned 2 sample accounts/);
   assert.match(success.stdout, /PASS live feed emitted/);
 
+  await assert.rejects(
+    execFileAsync(process.execPath, [smokeCheckPath, '--api', localUrl, '--dashboard'], {
+      cwd: repositoryRoot,
+      timeout: 10_000,
+    }),
+    (error) => error.code === 1 && error.stderr.includes('Missing value for --dashboard'),
+  );
+
   syntheticNotice = false;
   await assert.rejects(
     execFileAsync(process.execPath, args, { cwd: repositoryRoot, timeout: 10_000 }),
