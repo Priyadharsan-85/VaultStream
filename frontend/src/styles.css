@@ -118,3 +118,78 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 430px) { .sandbox-field-row { grid-template-columns: 1fr; }.sandbox-add,.sandbox-reset,.activity-actions .export-button { min-height: 29px; padding-inline: 7px; font-size: 6px; }.sandbox-row-actions { flex-wrap: wrap; } }
 @media (max-width: 860px) { .live-feed-events { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 620px) { .live-feed-panel { padding: 12px; }.live-feed-heading { flex-direction: column; }.live-stream-status { margin-top: 0; }.live-feed-events { grid-template-columns: 1fr; }.live-feed-foot { font-size: 5px; letter-spacing: .15px; } }
+
+/* Preserve the visual system while keeping dashboard copy readable. */
+:root { --ink-soft: #454b43; --muted: #555b52; --coral: #a94531; }
+.sidebar-edition,.nav-label,.nav-item>b,.aside-index,.sandbox-seal strong,.sidebar-footer { font-size: 10px; color: #c3cec1; }
+.brand>span:last-child>span { font-size: 10px; }
+.workspace-switch strong,.workspace-switch small,.nav-item>span,.github-link { font-size: 12px; }
+.sidebar-edition span:last-child,.nav-item>b,.aside-index,.sidebar-footer,.sandbox-seal small,.github-link svg { color: #c3cec1; }
+.sandbox-seal small { font-size: 11px; }
+.breadcrumbs,.folio-date,.demo-badge { font-size: 11px; color: #4d554c; }
+.hero-overline,.hero-meta,.hero-ledger-heading,.journal-marker,.journal-label small,.ledger-stamp,.journal-balance,.hero-side-note { font-size: 10px; }
+.hero-overline,.hero-meta,.hero-side-note,.journal-label small,.hero-ledger-heading,.journal-balance { color: #4e554b; }
+.hero-subtitle { color: #454b43; font-size: 16px; line-height: 1.6; }
+.journal-balance strong { font-size: 12px; }
+.notice-banner,.error-banner { color: #41483d; font-size: 14px; }
+.notice-banner strong { color: #283e2c; }
+.error-banner { color: #6d382b; }
+.error-banner button { color: #803c29; font-size: 13px; }
+.measure-label { color: #4f554c; font-size: 11px; }
+.measure-label i { color: #686b60; }
+.measure>small { color: #4f554c; font-size: 12px; }
+.measure-status>small { line-height: 1.35; }
+.section-number,.account-count,.readout-current,.readout-label,.chart-y-labels,.chart-dates,.period-tabs button,.chart-footnote { font-size: 10px; }
+.section-number { color: #9c3e2d; }
+.section-head p,.activity-topline p,.live-feed-heading p,.sandbox-dialog-head p { color: #4f554c; font-size: 13px; line-height: 1.45; }
+.account-selector select { font-size: 12px; }
+.readout-caption,.account-intro { color: #4d534a; }
+.readout-current,.readout-label,.chart-y-labels,.chart-dates,.chart-footnote,.account-count { color: #50564d; }
+.chart-readout,.chart-readout strong,.readout-date { font-size: 12px; }
+.period-tabs button { color: #4c5249; }
+.account-intro { font-size: 14px; }
+.account-card-top,.account-card-bottom { font-size: 10px; }
+.account-card-0 .account-card-top,.account-card-0 .account-card-bottom { color: #354d37; }
+.account-card-1 .account-card-top,.account-card-1 .account-card-bottom { color: #654536; }
+.account-card-bottom strong { font-size: 12px; }
+.activity-actions .raw-link,.export-button,.sandbox-add,.sandbox-reset,.sandbox-row-actions button { font-size: 12px; }
+.filter-tabs button { color: #4b5148; font-size: 12px; }
+.filter-tabs button small { color: #4f554c; font-size: 10px; }
+.search-field input { font-size: 13px; }
+th { color: #4d534b; font-size: 10px; }
+td { color: #42483f; font-size: 12px; }
+.transaction-button strong { font-size: 14px; }
+.transaction-button small,.reference-code,.date-cell,.transaction-type,.transaction-amount { color: #4c5249; font-size: 11px; }
+.amount-in { color: #315a35; }
+.amount-out { color: #8d3f2a; }
+.row-index { font-size: 10px; }
+.entry-detail span { color: #4e554b; font-size: 10px; }
+.entry-detail strong { color: #3e483c; font-size: 11px; }
+.activity-footer,.page-footer { color: #4f554c; font-size: 10px; }
+.page-footer>span:first-child { color: #394b3c; }
+.sandbox-field { color: #4c5249; font-size: 11px; }
+.sandbox-field>span i { color: #555b52; }
+.sandbox-field input,.sandbox-field select { font-size: 13px; }
+.live-feed-heading p { margin-top: 7px; }
+.live-stream-status,.live-feed-foot { color: #4b5248; font-size: 10px; }
+.stream-live { color: #315a35; }
+.stream-reconnecting { color: #754a23; }
+.stream-paused { color: #70452f; }
+.live-event-copy small,.live-event>b { color: #3f4a3b; font-size: 10px; }
+.live-feed-empty { color: #4c5546; }
+.live-feed-foot { color: #4f554c; }
+
+@media (max-width: 620px) {
+  .breadcrumbs,.demo-badge,.hero-overline,.hero-meta,.section-number,.account-count,
+  .measure-label,.chart-y-labels,.chart-dates,.chart-footnote,.live-stream-status,
+  .live-feed-foot,.page-footer,.activity-footer { font-size: 9px; }
+  .hero-subtitle,.notice-banner,.error-banner { font-size: 14px; }
+  .section-head p,.activity-topline p,.live-feed-heading p { font-size: 12px; }
+  .account-selector select { font-size: 11px; }
+  .filter-tabs button,.search-field input,.activity-actions .raw-link,
+  .export-button,.sandbox-add,.sandbox-reset { font-size: 11px; }
+  .filter-tabs button small { font-size: 9px; }
+  .transaction-button strong { font-size: 13px; }
+  .transaction-button small,.reference-code,.date-cell,.transaction-type,
+  .transaction-amount,.entry-detail span,.entry-detail strong { font-size: 10px; }
+}
